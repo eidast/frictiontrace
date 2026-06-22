@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>FrictionTrace — http://127.0.0.1:8765</title>
+<style>:root {
+  --bg: #0d0f12;
+  --surface: #161a1f;
+  --surface-2: #1d2229;
+  --text: #e6e9ee;
+  --text-dim: #9aa3b2;
+  --border: #2a313b;
+  --accent: #6aa9ff;
+  --critical: #ff5b5b;
+  --high: #ff9450;
+  --med: #ffd166;
+  --low: #66d9a3;
+  --code-bg: #11151a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+main {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 32px 24px 96px;
+}
+
+h1 { font-size: 28px; margin: 0 0 8px; }
+h2 { font-size: 20px; margin: 32px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+
+.meta { color: var(--text-dim); font-size: 14px; }
+code { background: var(--code-bg); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+
+.score {
+  display: inline-block;
+  padding: 16px 24px;
+  border-radius: 12px;
+  margin: 16px 0;
+  background: var(--surface);
+}
+.score-num { font-size: 48px; font-weight: 700; line-height: 1; }
+.score-label { color: var(--text-dim); font-size: 13px; margin-top: 4px; }
+.score-low { border-left: 4px solid var(--low); }
+.score-med { border-left: 4px solid var(--med); }
+.score-high { border-left: 4px solid var(--high); }
+.score-critical { border-left: 4px solid var(--critical); }
+
+.severity-counts { list-style: none; padding: 0; display: flex; gap: 12px; flex-wrap: wrap; }
+.severity-counts li { padding: 6px 10px; border-radius: 6px; background: var(--surface-2); font-size: 13px; }
+.sev { font-size: 11px; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; font-weight: 600; }
+.sev-critical { background: var(--critical); color: #000; }
+.sev-high { background: var(--high); color: #000; }
+.sev-med { background: var(--med); color: #000; }
+.sev-low { background: var(--low); color: #000; }
+
+.badge { display: inline-block; margin-right: 6px; }
+.kind { font-family: ui-monospace, SFMono-Regular, monospace; }
+
+.top-issues li { margin: 8px 0; }
+.summary { color: var(--text); }
+
+section.perspective { background: var(--surface); padding: 16px 20px; border-radius: 10px; margin: 16px 0; }
+section.perspective h2 { border-bottom: none; margin-top: 0; }
+section.cliente { border-left: 3px solid var(--accent); }
+section.developer { border-left: 3px solid var(--med); }
+
+.llm-note { font-size: 12px; color: var(--text-dim); font-style: italic; }
+.dev-issues li { margin: 16px 0; }
+.dev-head { margin-bottom: 4px; }
+.dev-text { color: var(--text); }
+.evidence { font-size: 12px; color: var(--text-dim); }
+details summary { cursor: pointer; color: var(--text-dim); font-size: 13px; margin-top: 6px; }
+
+.screenshots { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.screenshot { background: var(--surface-2); padding: 8px; border-radius: 8px; }
+.screenshot img { max-width: 100%; display: block; border-radius: 4px; }
+.screenshot .cap { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
+
+.empty { color: var(--text-dim); font-style: italic; }
+</style>
+</head>
+<body>
+<main>
+<section class="executive">
+  <h1>Friction report</h1>
+  <p class="meta">
+    <strong>Target:</strong> http://127.0.0.1:8765<br>
+    <strong>Date:</strong> 2026-06-22T13:42:03.757Z<br>
+    <strong>Run ID:</strong> <code>run_mqp9lh4a_w7vjqx</code>
+  </p>
+
+  <div class="score score-med">
+    <div class="score-num">14</div>
+    <div class="score-label">Friction score (0–100, higher = more friction)</div>
+  </div>
+
+  <h2>Issue summary</h2>
+  <ul class="severity-counts">
+      <li class="sev sev-critical">critical: <strong>0</strong></li>
+      <li class="sev sev-high">high: <strong>1</strong></li>
+      <li class="sev sev-med">med: <strong>1</strong></li>
+      <li class="sev sev-low">low: <strong>0</strong></li>
+  </ul>
+
+  <h2>Top 5 issues</h2>
+    <ol class="top-issues">
+        <li>
+          <span class="badge sev-high">high</span>
+          <code class="kind">js_error</code>
+          <span class="summary">2 uncaught JavaScript errors: Failed to load resource: the server responded with a status of 404 (Not Found); Failed to load resource: the server responded with a status of 404 (Not Found)</span>
+        </li>
+        <li>
+          <span class="badge sev-med">med</span>
+          <code class="kind">slow_lcp</code>
+          <span class="summary">LCP 2548ms on  (threshold 2500ms)</span>
+        </li>
+    </ol>
+</section>
+
+<section class="perspective cliente">
+  <h2>Cliente final — qué sintió el usuario</h2>
+    <ul>
+        <li>
+          <strong>Error de JavaScript.</strong>
+          La página mostró errores internos no esperados. El usuario probablemente vio una página rota o un botón que no respondía.
+        </li>
+        <li>
+          <strong>Carga visual lenta.</strong>
+          El elemento más grande de la página tardó demasiado en aparecer. El usuario vio una página en blanco o incompleta durante más de 2.5 segundos.
+        </li>
+    </ul>
+</section>
+
+<section class="perspective developer">
+  <h2>Developer — qué arreglar y dónde</h2>
+  <p class="llm-note">Esta sección se genera a partir de los hechos verificados del run. En M1 se complementa con narrativa LLM (mismo formato, evidencia como contratos).</p>
+
+    <ol class="dev-issues">
+        <li>
+          <div class="dev-head">
+            <span class="badge sev-high">high</span>
+            <code class="kind">js_error</code>
+          </div>
+          <p>2 uncaught JavaScript errors: Failed to load resource: the server responded with a status of 404 (Not Found); Failed to load resource: the server responded with a status of 404 (Not Found)</p>
+            <p class="dev-text">Inspeccioná las trazas en console/pageerror. Reproducí el paso y revisá si hay llamadas a APIs deprecadas o variables indefinidas.</p>
+            <details>
+              <summary>Evidence (2 signals)</summary>
+              <ul class="evidence">
+                  <li><code>sig_mqp9lhff_u8rv7twy</code></li>
+                  <li><code>sig_mqp9lhff_acnowik2</code></li>
+              </ul>
+            </details>
+        </li>
+        <li>
+          <div class="dev-head">
+            <span class="badge sev-med">med</span>
+            <code class="kind">slow_lcp</code>
+          </div>
+          <p>LCP 2548ms on  (threshold 2500ms)</p>
+            <p class="dev-text">Optimizá la imagen o recurso que dispara el LCP. Preload, formato moderno (AVIF/WebP), o crítico inline.</p>
+            <details>
+              <summary>Evidence (1 signal)</summary>
+              <ul class="evidence">
+                  <li><code>sig_mqp9ljpz_gsoer0qj</code></li>
+              </ul>
+            </details>
+        </li>
+    </ol>
+</section>
+
+<section class="screenshots-section">
+  <h2>Evidence (screenshots per step)</h2>
+  <div class="screenshots">
+    <div class="screenshot">
+        <img src="screenshots/home-full-page.png" alt="full_page">
+        <div class="cap">full_page</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/home-above-fold.png" alt="above_fold">
+        <div class="cap">above_fold</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/home-viewport.png" alt="viewport">
+        <div class="cap">viewport</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/search-full-page.png" alt="full_page">
+        <div class="cap">full_page</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/search-viewport.png" alt="viewport">
+        <div class="cap">viewport</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/search-above-fold.png" alt="above_fold">
+        <div class="cap">above_fold</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/pick_product-full-page.png" alt="full_page">
+        <div class="cap">full_page</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/pick_product-viewport.png" alt="viewport">
+        <div class="cap">viewport</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/pick_product-above-fold.png" alt="above_fold">
+        <div class="cap">above_fold</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/product_detail-full-page.png" alt="full_page">
+        <div class="cap">full_page</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/product_detail-viewport.png" alt="viewport">
+        <div class="cap">viewport</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/product_detail-above-fold.png" alt="above_fold">
+        <div class="cap">above_fold</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/add_to_cart-viewport.png" alt="viewport">
+        <div class="cap">viewport</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/add_to_cart-above-fold.png" alt="above_fold">
+        <div class="cap">above_fold</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/add_to_cart-full-page.png" alt="full_page">
+        <div class="cap">full_page</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/cart-full-page.png" alt="full_page">
+        <div class="cap">full_page</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/cart-viewport.png" alt="viewport">
+        <div class="cap">viewport</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/cart-above-fold.png" alt="above_fold">
+        <div class="cap">above_fold</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/checkout-above-fold.png" alt="above_fold">
+        <div class="cap">above_fold</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/checkout-full-page.png" alt="full_page">
+        <div class="cap">full_page</div>
+      </div>
+<div class="screenshot">
+        <img src="screenshots/checkout-viewport.png" alt="viewport">
+        <div class="cap">viewport</div>
+      </div>
+  </div>
+</section>
+<footer>
+  <p class="meta">Run <code>run_mqp9lh4a_w7vjqx</code> · facts: 6 · issues: 2</p>
+</footer>
+</main>
+</body>
+</html>

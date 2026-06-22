@@ -1,0 +1,15 @@
+<section class="perspective cliente">
+  <h2>Cliente final — qué sintió el usuario</h2>
+  {{#if issues.length}}
+    <ul>
+      {{#each issues}}
+        <li>
+          <strong>{{this.kindLabel}}.</strong>
+          {{this.clienteText}}
+        </li>
+      {{/each}}
+    </ul>
+  {{else}}
+    <p>El recorrido completo (home → búsqueda → producto → carrito → checkout) se completó sin fricciones detectables. La experiencia del usuario fue limpia en lo que esta auditoría mide.</p>
+  {{/if}}
+</section>

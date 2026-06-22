@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Test Shop — Home</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Test Shop</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="search.html">Search</a>
+      <a href="product.html">Product</a>
+      <a href="cart.html">Cart</a>
+      <a href="checkout.html">Checkout</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Bug 7: large unoptimized hero image to force slow LCP -->
+    <div class="hero">
+      <img class="hero-img"
+           src="hero-large.jpg"
+           alt="Hero"
+           width="2400" height="1600"
+           style="width:100%;height:auto;background:#222">
+    </div>
+
+    <!-- Bug 1: broken image -->
+    <img class="promo" src="/missing-promo.jpg" alt="Promo" width="600" height="400">
+
+    <h2>Featured products</h2>
+    <ul class="products">
+      <li><a href="product.html?id=1">Product 1</a></li>
+      <li><a href="product.html?id=2">Product 2</a></li>
+      <li><a href="product.html?id=3">Product 3</a></li>
+    </ul>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
