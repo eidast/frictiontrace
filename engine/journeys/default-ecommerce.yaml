@@ -1,0 +1,94 @@
+name: default-ecommerce
+version: 1
+
+target:
+  baseUrl: ${URL}
+  country: AR
+  currency: ARS
+
+settings:
+  viewport:
+    width: 1366
+    height: 768
+  userAgent: desktop
+  locale: es-AR
+  timezone: America/Argentina/Buenos_Aires
+  throttle: none
+  cookies: []
+
+artifacts:
+  har: true
+  mhtml: true
+  trace: true
+  video: true
+  screenshots:
+    viewport: true
+    fullPage: true
+
+steps:
+  - name: home
+    kind: navigate
+    url: /
+    waitFor: domcontentloaded
+    timeoutMs: 15000
+    assertions:
+      - console_no_errors
+      - status_2xx
+
+  - name: search
+    kind: interact
+    actions:
+      - findSelector: input[name="q"], input[type="search"]
+        fallback:
+          - input[placeholder*="buscar" i]
+          - input[placeholder*="search" i]
+          - input[aria-label*="search" i]
+        onError: skip_step
+        type: "zapatillas"
+        pressEnter: true
+    waitFor: networkidle
+    timeoutMs: 10000
+
+  - name: pick_product
+    kind: extract_and_click
+    selector: a.product-card:first-of-type
+    fallback:
+      - "[data-testid='product'] a:first-of-type"
+      - "a[href*='/producto/']:first-of-type"
+      - "a[href*='/product/']:first-of-type"
+    waitFor: domcontentloaded
+    timeoutMs: 10000
+
+  - name: product_detail
+    kind: interact
+    actions:
+      - findSelector: ""
+        action: scroll
+        scroll:
+          to: bottom
+          smooth: true
+    waitFor: networkidle
+    timeoutMs: 10000
+
+  - name: add_to_cart
+    kind: interact
+    actions:
+      - findSelector: "button[data-testid='add-to-cart'], button:has-text('Agregar al carrito'), button:has-text('Add to cart')"
+        optional: true
+        onError: skip_step
+        action: click
+        afterMs: 1500
+    waitFor: networkidle
+    timeoutMs: 10000
+
+  - name: cart
+    kind: navigate
+    url: /cart
+    waitFor: domcontentloaded
+    timeoutMs: 10000
+
+  - name: checkout
+    kind: navigate
+    url: /checkout
+    waitFor: networkidle
+    timeoutMs: 10000

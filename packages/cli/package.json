@@ -1,0 +1,24 @@
+{
+  "name": "@frictiontrace/cli",
+  "version": "0.1.0",
+  "description": "FrictionTrace CLI: `ft run`, `ft validate`, `ft replay`",
+  "type": "module",
+  "bin": {
+    "ft": "./bin/ft"
+  },
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@frictiontrace/engine": "*",
+    "commander": "^12.1.0",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.0",
+    "typescript": "^5.6.0"
+  },
+  "license": "MIT"
+}

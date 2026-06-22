@@ -1,0 +1,86 @@
+name: marketplace
+version: 1
+
+target:
+  baseUrl: ${URL}
+
+settings:
+  viewport: { width: 1366, height: 768 }
+  userAgent: desktop
+  locale: en-US
+  timezone: UTC
+  throttle: none
+  cookies: []
+
+artifacts:
+  har: true
+  mhtml: true
+  trace: true
+  video: true
+  screenshots: { viewport: true, fullPage: true }
+
+steps:
+  - name: home
+    kind: navigate
+    url: /
+    waitFor: domcontentloaded
+    timeoutMs: 15000
+
+  - name: search
+    kind: interact
+    actions:
+      - findSelector: "input[name='search']"
+        fallback:
+          - "input[aria-label*='search' i]"
+          - "input[placeholder*='search' i]"
+          - "input[placeholder*='buscar' i]"
+        onError: skip_step
+        type: "laptop"
+        pressEnter: true
+    waitFor: networkidle
+    timeoutMs: 10000
+
+  - name: seller_listing
+    kind: extract_and_click
+    selector: "[data-testid='listing']:first-of-type a"
+    fallback:
+      - ".listing-card:first-of-type a"
+      - "a[href*='/listing' i]:first-of-type"
+      - "a[href*='/item' i]:first-of-type"
+    waitFor: domcontentloaded
+    timeoutMs: 10000
+
+  - name: listing_detail
+    kind: interact
+    actions:
+      - findSelector: ""
+        action: scroll
+        scroll: { to: bottom, smooth: true }
+    waitFor: networkidle
+    timeoutMs: 10000
+
+  - name: add_to_cart
+    kind: interact
+    actions:
+      - findSelector: "button[data-testid='add-to-cart']"
+        fallback:
+          - "button:has-text('Add to Cart')"
+          - "button:has-text('Buy It Now')"
+        optional: true
+        onError: skip_step
+        action: click
+        afterMs: 1500
+    waitFor: networkidle
+    timeoutMs: 10000
+
+  - name: cart
+    kind: navigate
+    url: /cart
+    waitFor: domcontentloaded
+    timeoutMs: 10000
+
+  - name: checkout
+    kind: navigate
+    url: /checkout
+    waitFor: networkidle
+    timeoutMs: 10000

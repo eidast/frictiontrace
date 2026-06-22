@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Test Shop — Product</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Test Shop</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="search.html">Search</a>
+      <a href="product.html">Product</a>
+      <a href="cart.html">Cart</a>
+      <a href="checkout.html">Checkout</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="product">
+      <h2>Test product</h2>
+      <p>Price: $99.99</p>
+      <!-- Bug 6: layout shift — late-loading banner that pushes content down -->
+      <div id="late-banner" style="height:0;overflow:hidden;background:orange;color:white;padding:8px">
+        Late banner!
+      </div>
+      <button data-testid="add-to-cart" class="add-to-cart">Agregar al carrito</button>
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+  <script>
+    // Bug 3: console.error every 2 seconds
+    setInterval(() => { console.error("planted: heartbeat error at " + new Date().toISOString()); }, 2000);
+    // Bug 6 part 2: late banner appears
+    setTimeout(() => {
+      const el = document.getElementById("late-banner");
+      if (el) el.style.height = "auto";
+    }, 800);
+  </script>
+</body>
+</html>

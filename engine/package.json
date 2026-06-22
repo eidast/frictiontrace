@@ -1,0 +1,57 @@
+{
+  "name": "@frictiontrace/engine",
+  "version": "0.1.0",
+  "description": "FrictionTrace open-core engine: browser runner, signal capture, analyzer, artifact generation, local report rendering",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./storage": {
+      "types": "./dist/storage/index.d.ts",
+      "import": "./dist/storage/index.js"
+    },
+    "./journey": {
+      "types": "./dist/journey/index.d.ts",
+      "import": "./dist/journey/index.js"
+    },
+    "./signals": {
+      "types": "./dist/signals/index.d.ts",
+      "import": "./dist/signals/index.js"
+    },
+    "./analyzer": {
+      "types": "./dist/analyzer/index.d.ts",
+      "import": "./dist/analyzer/index.js"
+    },
+    "./artifacts": {
+      "types": "./dist/artifacts/index.d.ts",
+      "import": "./dist/artifacts/index.js"
+    },
+    "./render": {
+      "types": "./dist/render/index.d.ts",
+      "import": "./dist/render/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && npm run copy-assets",
+    "copy-assets": "node scripts/copy-assets.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:unit": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.5.0",
+    "handlebars": "^4.7.8",
+    "playwright": "^1.48.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^20.16.0",
+    "vitest": "^4.0.0"
+  },
+  "license": "MIT"
+}

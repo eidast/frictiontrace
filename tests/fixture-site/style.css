@@ -1,0 +1,23 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #fafafa;
+  color: #222;
+  margin: 0;
+  padding: 0;
+}
+header {
+  background: #1a1a1a;
+  color: #fff;
+  padding: 16px 24px;
+}
+header h1 { margin: 0; font-size: 18px; }
+nav a { color: #fff; text-decoration: none; margin-right: 12px; font-size: 14px; }
+main { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+.hero { background: #ddd; }
+.promo { display: block; margin: 16px 0; }
+.products { list-style: none; padding: 0; }
+.products li { padding: 8px 0; border-bottom: 1px solid #eee; }
+.search-form { margin: 16px 0; }
+.search-form input { padding: 8px; font-size: 14px; width: 70%; }
+button.add-to-cart { padding: 8px 16px; background: #2a8f4a; color: white; border: none; border-radius: 4px; cursor: pointer; }
+.checkout-link { display: inline-block; margin-top: 16px; padding: 8px 16px; background: #2a8f4a; color: white; text-decoration: none; border-radius: 4px; }

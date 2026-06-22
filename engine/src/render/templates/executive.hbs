@@ -1,0 +1,35 @@
+<section class="executive">
+  <h1>Friction report</h1>
+  <p class="meta">
+    <strong>Target:</strong> {{targetUrl}}<br>
+    <strong>Date:</strong> {{date}}<br>
+    <strong>Run ID:</strong> <code>{{runId}}</code>
+  </p>
+
+  <div class="score score-{{scoreBand}}">
+    <div class="score-num">{{score}}</div>
+    <div class="score-label">Friction score (0–100, higher = more friction)</div>
+  </div>
+
+  <h2>Issue summary</h2>
+  <ul class="severity-counts">
+    {{#each severityCounts}}
+      <li class="sev sev-{{this.severity}}">{{this.severity}}: <strong>{{this.count}}</strong></li>
+    {{/each}}
+  </ul>
+
+  <h2>Top 5 issues</h2>
+  {{#if topIssues.length}}
+    <ol class="top-issues">
+      {{#each topIssues}}
+        <li>
+          <span class="badge sev-{{this.severity}}">{{this.severity}}</span>
+          <code class="kind">{{this.kind}}</code>
+          <span class="summary">{{this.summary}}</span>
+        </li>
+      {{/each}}
+    </ol>
+  {{else}}
+    <p class="empty">No issues detected. The site looked clean across the categories we measured.</p>
+  {{/if}}
+</section>

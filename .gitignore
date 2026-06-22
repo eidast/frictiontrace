@@ -1,0 +1,23 @@
+node_modules/
+dist/
+runs/
+*.db
+*.db-journal
+*.har
+*.mhtml
+trace.zip
+screenshots/
+.DS_Store
+*.log
+.env
+.env.local
+coverage/
+.vscode/
+.idea/
+test-results/
+playwright-report/
+
+# Tooling artifacts (not part of the project)
+.codegraph/
+.opencode/
+.superpowers/

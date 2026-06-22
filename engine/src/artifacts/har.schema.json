@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HAR 1.2 (FrictionTrace minimal subset)",
+  "type": "object",
+  "required": ["log"],
+  "properties": {
+    "log": {
+      "type": "object",
+      "required": ["version", "creator", "entries"],
+      "properties": {
+        "version": { "type": "string", "enum": ["1.2"] },
+        "creator": {
+          "type": "object",
+          "required": ["name", "version"],
+          "properties": {
+            "name": { "type": "string" },
+            "version": { "type": "string" }
+          }
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["startedDateTime", "request", "response", "timings"],
+            "properties": {
+              "startedDateTime": { "type": "string" },
+              "time": { "type": "number" },
+              "request": {
+                "type": "object",
+                "required": ["method", "url"],
+                "properties": {
+                  "method": { "type": "string" },
+                  "url": { "type": "string" }
+                }
+              },
+              "response": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": { "type": "number" },
+                  "statusText": { "type": "string" }
+                }
+              },
+              "timings": {
+                "type": "object",
+                "required": ["send", "wait", "receive"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

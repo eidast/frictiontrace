@@ -1,0 +1,19 @@
+{
+  "name": "@frictiontrace/tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:integration": "playwright test --config playwright.config.ts"
+  },
+  "dependencies": {
+    "@frictiontrace/engine": "*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^20.16.0",
+    "vitest": "^4.0.0"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,33 @@
+<section class="perspective developer">
+  <h2>Developer — qué arreglar y dónde</h2>
+  <p class="llm-note">Esta sección se genera a partir de los hechos verificados del run. En M1 se complementa con narrativa LLM (mismo formato, evidencia como contratos).</p>
+
+  {{#if issues.length}}
+    <ol class="dev-issues">
+      {{#each issues}}
+        <li>
+          <div class="dev-head">
+            <span class="badge sev-{{this.severity}}">{{this.severity}}</span>
+            <code class="kind">{{this.kind}}</code>
+          </div>
+          <p>{{this.summary}}</p>
+          {{#if this.developerText}}
+            <p class="dev-text">{{this.developerText}}</p>
+          {{/if}}
+          {{#if this.evidence.length}}
+            <details>
+              <summary>Evidence ({{this.evidence.length}} signal{{#ifneq this.evidence.length 1}}s{{/ifneq}})</summary>
+              <ul class="evidence">
+                {{#each this.evidence}}
+                  <li><code>{{this}}</code></li>
+                {{/each}}
+              </ul>
+            </details>
+          {{/if}}
+        </li>
+      {{/each}}
+    </ol>
+  {{else}}
+    <p>No issues. Nothing to fix here.</p>
+  {{/if}}
+</section>
