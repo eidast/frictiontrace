@@ -60,11 +60,11 @@ sites:
       - type: homepage
         url: https://www.walmart.com.ni/
       - type: checkout
-        url: null
+        url: https://www.walmart.com.ni/checkout/#/cart
       - type: plp
-        url: null
+        url: https://www.walmart.com.ni/abarrotes
       - type: pdp
-        url: null
+        url: https://www.walmart.com.ni/bebida-gaseosa-coca-cola-zero-menos-calorias-2000-ml/p
   - origin: www.masxmenos.cr
     group: walmart_subsidiarias
     label: Más x Menos Costa Rica
@@ -73,11 +73,11 @@ sites:
       - type: homepage
         url: https://www.masxmenos.cr/
       - type: checkout
-        url: null
+        url: https://www.masxmenos.cr/checkout/#/cart
       - type: plp
-        url: null
+        url: https://www.masxmenos.cr/abarrotes
       - type: pdp
-        url: null
+        url: https://www.masxmenos.cr/gaseosa-coca-cola-sin-azucar-2500ml-3/p
   - origin: www.paiz.com.gt
     group: walmart_subsidiarias
     label: Paiz Guatemala
@@ -86,11 +86,11 @@ sites:
       - type: homepage
         url: https://www.paiz.com.gt/
       - type: checkout
-        url: null
+        url: https://www.paiz.com.gt/checkout/#/cart
       - type: plp
-        url: null
+        url: https://www.paiz.com.gt/abarrotes
       - type: pdp
-        url: null
+        url: https://www.paiz.com.gt/bebida-gaseosa-marca-coca-cola-2l/p
   - origin: www.paiz.com.hn
     group: walmart_subsidiarias
     label: Paiz Honduras
@@ -99,11 +99,11 @@ sites:
       - type: homepage
         url: https://www.paiz.com.hn/
       - type: checkout
-        url: null
+        url: https://www.paiz.com.hn/checkout/#/cart
       - type: plp
-        url: null
+        url: https://www.paiz.com.hn/abarrotes
       - type: pdp
-        url: null
+        url: https://www.paiz.com.hn/gaseosa-coca-cola-sabor-original-1-1lt-pet/p
   - origin: www.ladespensadedonjuan.com.sv
     group: walmart_subsidiarias
     label: La Despensa de Don Juan El Salvador
@@ -112,11 +112,11 @@ sites:
       - type: homepage
         url: https://www.ladespensadedonjuan.com.sv/
       - type: checkout
-        url: null
+        url: https://www.ladespensadedonjuan.com.sv/checkout/#/cart
       - type: plp
-        url: https://www.ladespensadedonjuan.com.sv/exclusivas
+        url: https://www.ladespensadedonjuan.com.sv/abarrotes
       - type: pdp
-        url: https://www.ladespensadedonjuan.com.sv/issima-sopa-pollo-64-g-8/p
+        url: https://www.ladespensadedonjuan.com.sv/gaseosa-coca-cola-pet-3000ml/p
   - origin: www.launion.com.ni
     group: walmart_subsidiarias
     label: La Unión Nicaragua
@@ -125,11 +125,11 @@ sites:
       - type: homepage
         url: https://www.launion.com.ni/
       - type: checkout
-        url: null
+        url: https://www.launion.com.ni/checkout/#/cart
       - type: plp
-        url: null
+        url: https://www.launion.com.ni/abarrotes
       - type: pdp
-        url: null
+        url: https://www.launion.com.ni/leche-dos-pinos-delactomy-a2-uht-facil-de-digerir-1-l/p
   - origin: www.maxidespensa.com.sv
     group: walmart_subsidiarias
     label: Maxi Despensa El Salvador
@@ -138,11 +138,11 @@ sites:
       - type: homepage
         url: https://www.maxidespensa.com.sv/
       - type: checkout
-        url: null
+        url: https://www.maxidespensa.com.sv/checkout/#/cart
       - type: plp
-        url: https://www.maxidespensa.com.sv/exclusivas
+        url: https://www.maxidespensa.com.sv/abarrotes
       - type: pdp
-        url: https://www.maxidespensa.com.sv/g56-motorola-8gb-256gb-sv1939-5-4/p
+        url: https://www.maxidespensa.com.sv/gaseosa-coca-cola-pet-3000ml/p
   - origin: www.maxidespensa.com.gt
     group: walmart_subsidiarias
     label: Maxi Despensa Guatemala
@@ -151,11 +151,11 @@ sites:
       - type: homepage
         url: https://www.maxidespensa.com.gt/
       - type: checkout
-        url: null
+        url: https://www.maxidespensa.com.gt/checkout/#/cart
       - type: plp
-        url: https://www.maxidespensa.com.gt/exclusivas
+        url: https://www.maxidespensa.com.gt/abarrotes
       - type: pdp
-        url: https://www.maxidespensa.com.gt/pantalla-basica-hotline-led-32-pulgadas-modelo-hl32a23s-g173/p
+        url: https://www.maxidespensa.com.gt/coca-cola-sin-azucar-1500ml/p
   - origin: www.maxipali.co.cr
     group: walmart_subsidiarias
     label: Maxi Palí Costa Rica
@@ -164,11 +164,11 @@ sites:
       - type: homepage
         url: https://www.maxipali.co.cr/
       - type: checkout
-        url: null
+        url: https://www.maxipali.co.cr/checkout/#/cart
       - type: plp
-        url: null
+        url: https://www.maxipali.co.cr/abarrotes
       - type: pdp
-        url: null
+        url: https://www.maxipali.co.cr/refresco-coca-cola-sin-azucar-pet-1500ml/p
   - origin: www.automercado.cr
     group: otros
     label: Auto Mercado Costa Rica
@@ -177,11 +177,11 @@ sites:
       - type: homepage
         url: https://www.automercado.cr/
       - type: checkout
-        url: null
+        url: https://automercado.cr/checkout
       - type: plp
-        url: https://automercado.cr/
+        url: https://automercado.cr/categorias/abarrotes
       - type: pdp
-        url: https://automercado.cr/productos/nuevos
+        url: https://automercado.cr/p/bebida-gaseosa-sin-azucar-cola-coca-cola-envase-2500-ml/id/ebc6f8f6-24f8-4382-9c41-ebfb5f9a2eab
   - origin: www.pricesmart.com
     group: otros
     label: PriceSmart Costa Rica
@@ -192,9 +192,9 @@ sites:
       - type: checkout
         url: https://www.pricesmart.com/es-cr/carrito
       - type: plp
-        url: https://www.pricesmart.com/es-cr/categorias
+        url: https://www.pricesmart.com/es-cr/categoria/Alimentos-G10D03/G10D03
       - type: pdp
-        url: https://www.pricesmart.com/es-cr/categoria/Productos-de-temporada-S10D45/S10D45
+        url: https://www.pricesmart.com/es-cr/producto/coca-cola-sabor-original-bebida-gaseosa-sabor-a-cola-4-unidades-2-5-l-255206/255206
   - origin: www.exito.com
     group: otros
     label: Éxito Colombia
@@ -203,11 +203,11 @@ sites:
       - type: homepage
         url: https://www.exito.com/
       - type: checkout
-        url: null
+        url: https://www.exito.com/checkout/#/cart
       - type: plp
-        url: https://www.exito.com/mercado/home
+        url: https://www.exito.com/mercado/aseo-del-hogar
       - type: pdp
-        url: https://www.exito.com/
+        url: https://www.exito.com/gaseosa-cocacola-coca-cola-3000-ml-3048038/p
   - origin: www.carrefour.com.ar
     group: otros
     label: Carrefour Argentina
@@ -216,11 +216,11 @@ sites:
       - type: homepage
         url: https://www.carrefour.com.ar/
       - type: checkout
-        url: null
+        url: https://www.carrefour.com.ar/checkout/#/cart
       - type: plp
-        url: null
+        url: https://www.carrefour.com.ar/hogar
       - type: pdp
-        url: null
+        url: https://www.carrefour.com.ar/gaseosa-cola-coca-cola-zero-225-lts-393964/p
   - origin: www.chedraui.com.mx
     group: otros
     label: Chedraui México
@@ -229,11 +229,11 @@ sites:
       - type: homepage
         url: https://www.chedraui.com.mx/
       - type: checkout
-        url: null
+        url: https://www.chedraui.com.mx/checkout-io/cart
       - type: plp
-        url: null
+        url: https://www.chedraui.com.mx/supermercado/despensa
       - type: pdp
-        url: null
+        url: https://www.chedraui.com.mx/refresco-coca-cola-sin-azucar-3l-3502536/p
   - origin: www.latorre.com.gt
     group: otros
     label: La Torre Guatemala
