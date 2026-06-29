@@ -17,6 +17,7 @@ coverage/
 .idea/
 test-results/
 playwright-report/
+reports/crux-dashboard.html
 
 # Tooling artifacts (not part of the project)
 .codegraph/

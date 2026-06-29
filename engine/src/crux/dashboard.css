@@ -1,0 +1,412 @@
+/* CrUX Analytics Dashboard — Dark Theme */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  background: #0d1117;
+  color: #c9d1d9;
+}
+
+/* ── Top Bar ─────────────────────────────────────────────────────────── */
+
+#topbar {
+  height: 48px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  justify-content: space-between;
+}
+
+#topbar .left {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+#topbar .right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#topbar select,
+#topbar input,
+#topbar .btn {
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#topbar select:hover,
+#topbar .btn:hover {
+  background: #30363d;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────── */
+
+#sidebar {
+  width: 280px;
+  background: #161b22;
+  border-right: 1px solid #30363d;
+  float: left;
+  height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 16px;
+}
+
+#sidebar .section {
+  margin-bottom: 20px;
+}
+
+#sidebar label,
+#sidebar .label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #8b949e;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+
+#sidebar select,
+#sidebar input {
+  width: 100%;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+#sidebar .site-checkboxes {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 8px;
+  background: #0d1117;
+}
+
+#sidebar .site-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 12px;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #c9d1d9;
+}
+
+/* ── Main Content ─────────────────────────────────────────────────────── */
+
+#main {
+  margin-left: 280px;
+  height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────────────── */
+
+#tabs {
+  display: flex;
+  border-bottom: 1px solid #30363d;
+  background: #161b22;
+  padding: 0 16px;
+}
+
+#tabs button {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  color: #8b949e;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+}
+
+#tabs button.active {
+  color: #c9d1d9;
+  border-bottom-color: #58a6ff;
+}
+
+.tab-content {
+  padding: 24px;
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* ── Scorecards ───────────────────────────────────────────────────────── */
+
+#exec-scorecards {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.scorecard {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 16px;
+  flex: 1;
+  text-align: center;
+}
+
+.scorecard .metric-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #8b949e;
+}
+
+.scorecard .metric-value {
+  font-size: 28px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+/* ── Health Table ─────────────────────────────────────────────────────── */
+
+.health-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+
+.health-table th,
+.health-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #30363d;
+  font-size: 13px;
+  text-align: left;
+}
+
+.health-table th {
+  color: #8b949e;
+  font-weight: 500;
+}
+
+/* ── Chart Containers ─────────────────────────────────────────────────── */
+
+.chart-container {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  min-height: 300px;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+
+.btn {
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.btn:hover {
+  background: #30363d;
+}
+
+/* ── Presets Dropdown ─────────────────────────────────────────────────── */
+
+.presets-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.presets-dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  min-width: 220px;
+  z-index: 100;
+}
+
+.presets-dropdown-content a {
+  display: block;
+  padding: 8px 16px;
+  color: #c9d1d9;
+  text-decoration: none;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.presets-dropdown-content a:hover {
+  background: #30363d;
+}
+
+/* ── D3 Tooltips ──────────────────────────────────────────────────────── */
+
+.d3-tooltip {
+  position: absolute;
+  background: #161b22;
+  border: 1px solid #30363d;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  pointer-events: none;
+  color: #c9d1d9;
+}
+
+.d3-tooltip .date {
+  color: #8b949e;
+  font-size: 11px;
+}
+
+/* ── SVG Elements ─────────────────────────────────────────────────────── */
+
+svg text {
+  fill: #8b949e;
+  font-size: 11px;
+}
+
+svg .domain,
+svg .tick line {
+  stroke: #30363d;
+}
+
+svg .axis line,
+svg .axis .domain {
+  stroke: #30363d;
+}
+
+/* Line chart paths */
+.line-chart {
+  stroke-width: 2px;
+  fill: none;
+}
+
+/* Bar chart colors */
+.bar-good {
+  fill: #3fb950;
+}
+
+.bar-ni {
+  fill: #d29922;
+}
+
+.bar-poor {
+  fill: #f85149;
+}
+
+/* Line chart colors */
+.line-good {
+  stroke: #3fb950;
+}
+
+.line-ni {
+  stroke: #d29922;
+}
+
+.line-poor {
+  stroke: #f85149;
+}
+
+/* ── Data Table ───────────────────────────────────────────────────────── */
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  background: #161b22;
+  position: sticky;
+  top: 0;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-bottom: 1px solid #30363d;
+  font-size: 13px;
+  text-align: left;
+  color: #8b949e;
+  font-weight: 500;
+}
+
+.data-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #30363d;
+  font-size: 13px;
+}
+
+.data-table tr:hover td {
+  background: rgba(88, 166, 255, 0.05);
+}
+
+/* ── Empty State ──────────────────────────────────────────────────────── */
+
+.empty-state {
+  text-align: center;
+  padding: 48px;
+  color: #8b949e;
+  font-size: 14px;
+  display: none;
+}
+
+/* ── Error Toast ──────────────────────────────────────────────────────── */
+
+.error-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #da3633;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  z-index: 9999;
+  display: none;
+}
+
+/* ── Scrollbar (optional dark overlay for sidebar / main) ─────────────── */
+
+#sidebar::-webkit-scrollbar,
+#main::-webkit-scrollbar,
+.site-checkboxes::-webkit-scrollbar {
+  width: 6px;
+}
+
+#sidebar::-webkit-scrollbar-track,
+#main::-webkit-scrollbar-track,
+.site-checkboxes::-webkit-scrollbar-track {
+  background: #0d1117;
+}
+
+#sidebar::-webkit-scrollbar-thumb,
+#main::-webkit-scrollbar-thumb,
+.site-checkboxes::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 3px;
+}
+
+#sidebar::-webkit-scrollbar-thumb:hover,
+#main::-webkit-scrollbar-thumb:hover,
+.site-checkboxes::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}

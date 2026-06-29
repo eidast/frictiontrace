@@ -80,6 +80,20 @@ npx tsx scripts/crux-analyze.ts
 sqlite3 data/crux.db "SELECT * FROM crux_origins"
 ```
 
+### Dashboard
+
+Interactive D3.js dashboard for exploring CrUX data visually:
+
+```bash
+# Start interactive server (live data from crux.db)
+npx tsx scripts/crux-dashboard.ts --serve
+
+# Generate portable HTML report
+npx tsx scripts/crux-dashboard.ts --build
+```
+
+Open `http://localhost:3000` in serve mode, or `reports/crux-dashboard.html` for the portable version. Features: 5 views (Executive Summary, Group Comparison, Site Comparison, Historical Trends, Data Table), presets, export CSV/JSON, mobile vs desktop comparison.
+
 ## License
 
 MIT

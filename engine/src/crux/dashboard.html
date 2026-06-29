@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrUX Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+  <!-- Error Toast -->
+  <div id="error-toast" class="error-toast toast hidden">
+    <span id="toast-message"></span>
+    <button class="toast-close" aria-label="Cerrar">&times;</button>
+  </div>
+
+  <!-- Top Bar -->
+  <header id="topbar" class="topbar">
+    <h1 class="topbar-title">CrUX Dashboard</h1>
+    <div class="topbar-actions">
+      <div class="topbar-group">
+        <label for="preset-select" class="topbar-label">Presets:</label>
+        <select id="preset-select" class="topbar-select">
+          <option value="">-- Seleccionar preset --</option>
+        </select>
+      </div>
+      <button id="btn-export-csv" class="btn btn-export">Exportar CSV</button>
+      <button id="btn-export-json" class="btn btn-export">Exportar JSON</button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar">
+    <!-- Filter 1: Grupo -->
+    <div class="sidebar-section">
+      <label for="filter-grupo" class="sidebar-label">Grupo</label>
+      <select id="filter-grupo" class="sidebar-select">
+        <option value="Todos">Todos</option>
+        <option value="walmart_propios">walmart_propios</option>
+        <option value="walmart_subsidiarias">walmart_subsidiarias</option>
+        <option value="otros">otros</option>
+      </select>
+    </div>
+
+    <!-- Filter 2: Sitios -->
+    <div class="sidebar-section">
+      <label class="sidebar-label">Sitios</label>
+      <div id="site-checkboxes" class="scrollable checkbox-group">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+
+    <!-- Filter 3: Page Type -->
+    <div class="sidebar-section">
+      <label for="filter-page-type" class="sidebar-label">Page Type</label>
+      <select id="filter-page-type" class="sidebar-select">
+        <option value="Todos">Todos</option>
+        <option value="homepage">homepage</option>
+        <option value="checkout">checkout</option>
+        <option value="plp">plp</option>
+        <option value="pdp">pdp</option>
+      </select>
+    </div>
+
+    <!-- Filter 4: Métrica -->
+    <div class="sidebar-section">
+      <label for="filter-metric" class="sidebar-label">Métrica</label>
+      <select id="filter-metric" class="sidebar-select">
+        <option value="">Todas las métricas</option>
+        <option value="largest_contentful_paint">LCP</option>
+        <option value="cumulative_layout_shift">CLS</option>
+        <option value="interaction_to_next_paint">INP</option>
+        <option value="first_contentful_paint">FCP</option>
+        <option value="experimental_time_to_first_byte">TTFB</option>
+      </select>
+    </div>
+
+    <!-- Filter 5: Form Factor -->
+    <div class="sidebar-section">
+      <label for="filter-form-factor" class="sidebar-label">Form Factor</label>
+      <select id="filter-form-factor" class="sidebar-select">
+        <option value="Todos">Todos</option>
+        <option value="PHONE">PHONE</option>
+        <option value="DESKTOP">DESKTOP</option>
+      </select>
+    </div>
+
+    <!-- Filter 6: Nivel -->
+    <div class="sidebar-section">
+      <label for="filter-nivel" class="sidebar-label">Nivel</label>
+      <select id="filter-nivel" class="sidebar-select">
+        <option value="Todos">Todos</option>
+        <option value="URL">URL</option>
+        <option value="Origin">Origin</option>
+      </select>
+    </div>
+
+    <!-- Filter 7: Rango de fechas -->
+    <div class="sidebar-section">
+      <label class="sidebar-label">Rango de fechas</label>
+      <div class="date-range">
+        <input type="date" id="dateFrom" class="sidebar-input" title="Fecha inicio">
+        <span class="date-separator">—</span>
+        <input type="date" id="dateTo" class="sidebar-input" title="Fecha fin">
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main id="main" class="main-content">
+
+    <!-- Tabs -->
+    <nav id="tabs" class="tab-bar">
+      <button class="tab-btn active" data-tab="resumen">Resumen</button>
+      <button class="tab-btn" data-tab="grupos">Grupos</button>
+      <button class="tab-btn" data-tab="sitios">Sitios</button>
+      <button class="tab-btn" data-tab="tendencia">Tendencia</button>
+      <button class="tab-btn" data-tab="datos">Datos</button>
+    </nav>
+
+    <!-- Empty State Messages -->
+    <div id="empty-no-site" class="empty-state hidden">
+      <div class="empty-state-icon">&#9888;</div>
+      <p class="empty-state-title">Este sitio no tiene datos disponibles en CrUX</p>
+      <p class="empty-state-desc">Intentá capturar la información y volvé más tarde.</p>
+    </div>
+    <div id="empty-no-match" class="empty-state hidden">
+      <div class="empty-state-icon">&#128270;</div>
+      <p class="empty-state-title">No se encontraron resultados</p>
+      <p class="empty-state-desc">No se encontraron resultados para los filtros seleccionados. Probá con otros criterios.</p>
+    </div>
+    <div id="empty-db-missing" class="empty-state hidden">
+      <div class="empty-state-icon">&#128451;</div>
+      <p class="empty-state-title">Base de datos no encontrada</p>
+      <p class="empty-state-desc">Ejecutá <code>npx tsx scripts/crux-sync.ts</code> para reconstruir la información o contactá al administrador.</p>
+    </div>
+
+    <!-- Tab: Resumen -->
+    <div id="tab-resumen" class="tab-content active">
+      <div id="exec-scorecards" class="scorecards">
+        <!-- Scorecards populated dynamically -->
+      </div>
+      <div class="panel-grid">
+        <div id="exec-top5" class="panel list-panel">
+          <h2 class="panel-title">Top 5</h2>
+          <div class="panel-body">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+        <div id="exec-bottom5" class="panel list-panel">
+          <h2 class="panel-title">Bottom 5</h2>
+          <div class="panel-body">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+      <div id="exec-health" class="panel health-panel">
+        <h2 class="panel-title">Health</h2>
+        <div class="panel-body">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Grupos -->
+    <div id="tab-grupos" class="tab-content">
+      <div id="chart-groups" class="chart-container">
+        <h2 class="panel-title">Métrica por Grupo</h2>
+        <div class="chart-body">
+          <!-- D3 bar chart rendered here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Sitios -->
+    <div id="tab-sitios" class="tab-content">
+      <div id="chart-sites-bars" class="chart-container">
+        <h2 class="panel-title">Métrica por Sitio (Barras)</h2>
+        <div class="chart-body">
+          <!-- D3 bar chart rendered here -->
+        </div>
+      </div>
+      <div id="chart-sites-scatter" class="chart-container">
+        <h2 class="panel-title">Distribución por Sitio</h2>
+        <div class="chart-body">
+          <!-- D3 scatter plot rendered here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Tendencia -->
+    <div id="tab-tendencia" class="tab-content">
+      <div id="chart-timeseries" class="chart-container">
+        <h2 class="panel-title">Tendencia en el Tiempo</h2>
+        <div class="chart-body">
+          <!-- D3 line chart rendered here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Datos -->
+    <div id="tab-datos" class="tab-content">
+      <div class="panel">
+        <h2 class="panel-title">Datos Crudos</h2>
+        <div class="table-wrapper">
+          <table id="data-table" class="data-table">
+            <thead>
+              <tr>
+                <!-- Headers populated dynamically -->
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Rows populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
