@@ -3,6 +3,7 @@ dist/
 runs/
 *.db
 *.db-journal
+!data/crux.db
 *.har
 *.mhtml
 trace.zip

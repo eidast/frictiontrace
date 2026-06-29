@@ -27,6 +27,14 @@ Every issue MUST cite at least one `signal_id` in its `evidence` array. The `iss
 3. If the new category has derived facts, add them in `engine/src/analyzer/facts.ts`.
 4. If the new category has corresponding issues, add a rule per the "Adding an analyzer rule" steps.
 
+## Adding a new site to the CrUX benchmark
+
+1. Add the site to `docs/sites.md` under the appropriate group.
+2. Add a corresponding entry in `engine/crux-pages.yaml` with `url: null` for checkout, PLP, and PDP.
+3. Run `npx tsx scripts/crux-discover.ts` to discover the missing URLs.
+4. Run `npx tsx scripts/crux-sync.ts` to fetch CrUX history for the new site.
+5. Commit `engine/crux-pages.yaml` and `data/crux.db`.
+
 ## Running tests
 
 ```bash

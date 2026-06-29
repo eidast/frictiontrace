@@ -33,8 +33,52 @@ node packages/cli/bin/ft replay <runId>
 - `engine/` — the open-core engine: orchestrator, worker, signal capture, analyzer, artifacts, render
 - `packages/cli/` — the `ft` command-line interface
 - `tests/` — unit, integration, golden, and the planted-bug fixture site
+- `data/` — shared SQLite databases (e.g., `crux.db` with CrUX historical metrics)
 - `docs/superpowers/specs/` — design document
 - `openspec/changes/` — active OpenSpec changes
+
+## CrUX Data
+
+FrictionTrace integrates Google's [Chrome UX Report](https://developer.chrome.com/docs/crux) for real-user Core Web Vitals (LCP, CLS, INP, FCP, TTFB) across 28 e-commerce sites.
+
+### Setup
+
+```bash
+cp .env.example .env
+# Edit .env and add your CRUX_API_KEY from Google Cloud Console
+```
+
+### Discover site URLs
+
+Discovers checkout, PLP, and PDP URLs for each site in the benchmark:
+
+```bash
+npx tsx scripts/crux-discover.ts
+```
+
+This updates `engine/crux-pages.yaml` with discovered URLs.
+
+### Sync CrUX history
+
+Fetches up to 40 weeks of Core Web Vitals history from the CrUX API:
+
+```bash
+npx tsx scripts/crux-sync.ts
+```
+
+Results are stored in `data/crux.db` (versioned in the repo).
+
+### Analyze data
+
+```bash
+npx tsx scripts/crux-analyze.ts
+```
+
+### Query directly
+
+```bash
+sqlite3 data/crux.db "SELECT * FROM crux_origins"
+```
 
 ## License
 

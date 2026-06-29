@@ -1,0 +1,249 @@
+version: 1
+sites:
+  - origin: www.walmart.com.gt
+    group: walmart_propios
+    label: Walmart Guatemala
+    country: GT
+    pages:
+      - type: homepage
+        url: https://www.walmart.com.gt/
+      - type: checkout
+        url: https://www.walmart.com.gt/checkout/#/cart
+      - type: plp
+        url: https://www.walmart.com.gt/abarrotes
+      - type: pdp
+        url: https://www.walmart.com.gt/coca-cola-sin-azucar-1500ml/p
+  - origin: www.walmart.co.cr
+    group: walmart_propios
+    label: Walmart Costa Rica
+    country: CR
+    pages:
+      - type: homepage
+        url: https://www.walmart.co.cr/
+      - type: checkout
+        url: https://www.walmart.co.cr/checkout/#/cart
+      - type: plp
+        url: https://www.walmart.co.cr/abarrotes
+      - type: pdp
+        url: https://www.walmart.co.cr/gaseosa-coca-cola-sin-azucar-2500ml-3/p
+  - origin: www.walmart.com.sv
+    group: walmart_propios
+    label: Walmart El Salvador
+    country: SV
+    pages:
+      - type: homepage
+        url: https://www.walmart.com.sv/
+      - type: checkout
+        url: https://www.walmart.com.sv/checkout/#/cart
+      - type: plp
+        url: https://www.walmart.com.sv/abarrotes
+      - type: pdp
+        url: https://www.walmart.com.sv/gaseosa-coca-cola-pet-3000ml/p
+  - origin: www.walmart.com.hn
+    group: walmart_propios
+    label: Walmart Honduras
+    country: HN
+    pages:
+      - type: homepage
+        url: https://www.walmart.com.hn/
+      - type: checkout
+        url: https://www.walmart.com.hn/checkout/#/cart
+      - type: plp
+        url: https://www.walmart.com.hn/abarrotes
+      - type: pdp
+        url: https://www.walmart.com.hn/maggi-sopa-pollo-con-fideos-sobre-57g/p
+  - origin: www.walmart.com.ni
+    group: walmart_propios
+    label: Walmart Nicaragua
+    country: NI
+    pages:
+      - type: homepage
+        url: https://www.walmart.com.ni/
+      - type: checkout
+        url: null
+      - type: plp
+        url: null
+      - type: pdp
+        url: null
+  - origin: www.masxmenos.cr
+    group: walmart_subsidiarias
+    label: Más x Menos Costa Rica
+    country: CR
+    pages:
+      - type: homepage
+        url: https://www.masxmenos.cr/
+      - type: checkout
+        url: null
+      - type: plp
+        url: null
+      - type: pdp
+        url: null
+  - origin: www.paiz.com.gt
+    group: walmart_subsidiarias
+    label: Paiz Guatemala
+    country: GT
+    pages:
+      - type: homepage
+        url: https://www.paiz.com.gt/
+      - type: checkout
+        url: null
+      - type: plp
+        url: null
+      - type: pdp
+        url: null
+  - origin: www.paiz.com.hn
+    group: walmart_subsidiarias
+    label: Paiz Honduras
+    country: HN
+    pages:
+      - type: homepage
+        url: https://www.paiz.com.hn/
+      - type: checkout
+        url: null
+      - type: plp
+        url: null
+      - type: pdp
+        url: null
+  - origin: www.ladespensadedonjuan.com.sv
+    group: walmart_subsidiarias
+    label: La Despensa de Don Juan El Salvador
+    country: SV
+    pages:
+      - type: homepage
+        url: https://www.ladespensadedonjuan.com.sv/
+      - type: checkout
+        url: null
+      - type: plp
+        url: https://www.ladespensadedonjuan.com.sv/exclusivas
+      - type: pdp
+        url: https://www.ladespensadedonjuan.com.sv/issima-sopa-pollo-64-g-8/p
+  - origin: www.launion.com.ni
+    group: walmart_subsidiarias
+    label: La Unión Nicaragua
+    country: NI
+    pages:
+      - type: homepage
+        url: https://www.launion.com.ni/
+      - type: checkout
+        url: null
+      - type: plp
+        url: null
+      - type: pdp
+        url: null
+  - origin: www.maxidespensa.com.sv
+    group: walmart_subsidiarias
+    label: Maxi Despensa El Salvador
+    country: SV
+    pages:
+      - type: homepage
+        url: https://www.maxidespensa.com.sv/
+      - type: checkout
+        url: null
+      - type: plp
+        url: https://www.maxidespensa.com.sv/exclusivas
+      - type: pdp
+        url: https://www.maxidespensa.com.sv/g56-motorola-8gb-256gb-sv1939-5-4/p
+  - origin: www.maxidespensa.com.gt
+    group: walmart_subsidiarias
+    label: Maxi Despensa Guatemala
+    country: GT
+    pages:
+      - type: homepage
+        url: https://www.maxidespensa.com.gt/
+      - type: checkout
+        url: null
+      - type: plp
+        url: https://www.maxidespensa.com.gt/exclusivas
+      - type: pdp
+        url: https://www.maxidespensa.com.gt/pantalla-basica-hotline-led-32-pulgadas-modelo-hl32a23s-g173/p
+  - origin: www.maxipali.co.cr
+    group: walmart_subsidiarias
+    label: Maxi Palí Costa Rica
+    country: CR
+    pages:
+      - type: homepage
+        url: https://www.maxipali.co.cr/
+      - type: checkout
+        url: null
+      - type: plp
+        url: null
+      - type: pdp
+        url: null
+  - origin: www.automercado.cr
+    group: otros
+    label: Auto Mercado Costa Rica
+    country: CR
+    pages:
+      - type: homepage
+        url: https://www.automercado.cr/
+      - type: checkout
+        url: null
+      - type: plp
+        url: https://automercado.cr/
+      - type: pdp
+        url: https://automercado.cr/productos/nuevos
+  - origin: www.pricesmart.com
+    group: otros
+    label: PriceSmart Costa Rica
+    country: CR
+    pages:
+      - type: homepage
+        url: https://www.pricesmart.com/es-cr
+      - type: checkout
+        url: https://www.pricesmart.com/es-cr/carrito
+      - type: plp
+        url: https://www.pricesmart.com/es-cr/categorias
+      - type: pdp
+        url: https://www.pricesmart.com/es-cr/categoria/Productos-de-temporada-S10D45/S10D45
+  - origin: www.exito.com
+    group: otros
+    label: Éxito Colombia
+    country: CO
+    pages:
+      - type: homepage
+        url: https://www.exito.com/
+      - type: checkout
+        url: null
+      - type: plp
+        url: https://www.exito.com/mercado/home
+      - type: pdp
+        url: https://www.exito.com/
+  - origin: www.carrefour.com.ar
+    group: otros
+    label: Carrefour Argentina
+    country: AR
+    pages:
+      - type: homepage
+        url: https://www.carrefour.com.ar/
+      - type: checkout
+        url: null
+      - type: plp
+        url: null
+      - type: pdp
+        url: null
+  - origin: www.chedraui.com.mx
+    group: otros
+    label: Chedraui México
+    country: MX
+    pages:
+      - type: homepage
+        url: https://www.chedraui.com.mx/
+      - type: checkout
+        url: null
+      - type: plp
+        url: null
+      - type: pdp
+        url: null
+  - origin: www.latorre.com.gt
+    group: otros
+    label: La Torre Guatemala
+    country: GT
+    pages:
+      - type: homepage
+        url: https://www.latorre.com.gt/
+      - type: checkout
+        url: https://www.latorre.com.gt/checkout/#/cart
+      - type: plp
+        url: https://www.latorre.com.gt/abarrotes
+      - type: pdp
+        url: https://www.latorre.com.gt/atun-agua-lomo-trozos-light-sardimar-2-pack-112814/p
