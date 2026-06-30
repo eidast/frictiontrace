@@ -1,2 +1,1 @@
-data/crux.db binary
 data/crux.db filter=lfs diff=lfs merge=lfs -text
