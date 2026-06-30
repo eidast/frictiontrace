@@ -54,6 +54,48 @@ body {
   background: #30363d;
 }
 
+/* ── Active Filter Chips ─────────────────────────────────────────────── */
+
+.active-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  font-size: 11px;
+  color: #c9d1d9;
+  white-space: nowrap;
+}
+
+.filter-chip .chip-label {
+  color: #8b949e;
+  font-size: 10px;
+}
+
+.filter-chip .chip-remove {
+  cursor: pointer;
+  color: #8b949e;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  border: none;
+  background: none;
+}
+
+.filter-chip .chip-remove:hover {
+  color: #f85149;
+}
+
 /* ── Sidebar ─────────────────────────────────────────────────────────── */
 
 #sidebar {
@@ -66,8 +108,21 @@ body {
   padding: 16px;
 }
 
-#sidebar .section {
+#sidebar .section,
+#sidebar .sidebar-section {
   margin-bottom: 20px;
+}
+
+.sidebar-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.sidebar-label-row label {
+  margin-bottom: 0;
 }
 
 #sidebar label,
@@ -91,30 +146,132 @@ body {
   font-size: 13px;
 }
 
-#sidebar .site-checkboxes {
+.date-presets {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.date-preset-btn {
+  flex: 1;
+  padding: 4px 0;
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.date-preset-btn:hover {
+  background: #30363d;
+  color: #c9d1d9;
+}
+
+.date-preset-btn.active {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #ffffff;
+}
+
+.site-selector-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.selector-action-btn {
+  flex: 1;
+  padding: 5px 0;
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 150ms ease-out, color 150ms ease-out, transform 120ms ease-out;
+}
+
+.selector-action-btn:hover {
+  background: #30363d;
+  color: #c9d1d9;
+}
+
+.selector-action-btn:active {
+  transform: scale(0.98);
+}
+
+#sidebar .site-checkboxes,
+#sidebar .checkbox-group {
   max-height: 200px;
   overflow-y: auto;
   border: 1px solid #30363d;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 8px;
   background: #0d1117;
 }
 
-#sidebar .site-checkboxes label {
+#sidebar .site-checkboxes label,
+#sidebar .checkbox-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 0;
+  padding: 5px 6px;
   font-size: 12px;
   cursor: pointer;
   text-transform: none;
   letter-spacing: normal;
   color: #c9d1d9;
+  border-radius: 6px;
+  transition: background 150ms ease-out, transform 120ms ease-out;
+}
+
+#sidebar .checkbox-row:hover {
+  background: rgba(88, 166, 255, 0.08);
+}
+
+#sidebar .checkbox-row:active {
+  transform: scale(0.98);
+}
+
+.checkbox-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0 4px;
+  padding: 5px 6px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #8b949e;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.checkbox-group-header:first-child {
+  margin-top: 0;
+}
+
+.checkbox-group-count {
+  color: #58a6ff;
+  font-size: 10px;
+  letter-spacing: normal;
+}
+
+.checkbox-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── Main Content ─────────────────────────────────────────────────────── */
 
 #main {
+  position: relative;
   margin-left: 280px;
   height: calc(100vh - 48px);
   overflow-y: auto;
@@ -151,6 +308,88 @@ body {
 
 .tab-content.active {
   display: block;
+}
+
+.scope-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: #0d1117;
+  border-bottom: 1px solid #30363d;
+  font-size: 12px;
+}
+
+.scope-label {
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 11px;
+}
+
+.scope-value {
+  color: #c9d1d9;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-subtitle {
+  margin: -6px 0 14px;
+  color: #8b949e;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.info-tip {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid #30363d;
+  border-radius: 999px;
+  background: #21262d;
+  color: #8b949e;
+  cursor: help;
+  font-size: 11px;
+  line-height: 14px;
+  text-align: center;
+  transition: background 150ms ease-out, color 150ms ease-out, transform 120ms ease-out;
+}
+
+.info-tip:hover,
+.info-tip:focus-visible {
+  background: #30363d;
+  color: #c9d1d9;
+  outline: none;
+}
+
+.info-tip:active {
+  transform: scale(0.95);
+}
+
+.info-tooltip {
+  position: fixed;
+  z-index: 10000;
+  max-width: 320px;
+  padding: 10px 12px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  color: #c9d1d9;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.info-tooltip p {
+  margin: 6px 0;
+}
+
+.info-tooltip span {
+  color: #8b949e;
 }
 
 /* ── Scorecards ───────────────────────────────────────────────────────── */
@@ -388,18 +627,21 @@ svg .axis .domain {
 
 #sidebar::-webkit-scrollbar,
 #main::-webkit-scrollbar,
+.checkbox-group::-webkit-scrollbar,
 .site-checkboxes::-webkit-scrollbar {
   width: 6px;
 }
 
 #sidebar::-webkit-scrollbar-track,
 #main::-webkit-scrollbar-track,
+.checkbox-group::-webkit-scrollbar-track,
 .site-checkboxes::-webkit-scrollbar-track {
   background: #0d1117;
 }
 
 #sidebar::-webkit-scrollbar-thumb,
 #main::-webkit-scrollbar-thumb,
+.checkbox-group::-webkit-scrollbar-thumb,
 .site-checkboxes::-webkit-scrollbar-thumb {
   background: #30363d;
   border-radius: 3px;
@@ -407,6 +649,182 @@ svg .axis .domain {
 
 #sidebar::-webkit-scrollbar-thumb:hover,
 #main::-webkit-scrollbar-thumb:hover,
+.checkbox-group::-webkit-scrollbar-thumb:hover,
 .site-checkboxes::-webkit-scrollbar-thumb:hover {
   background: #484f58;
 }
+
+/* ── Loading Overlay ─────────────────────────────────────────────────── */
+
+.loading-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 17, 23, 0.7);
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.loading-overlay.show {
+  display: flex;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #30363d;
+  border-top-color: #58a6ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Comparison Grid ─────────────────────────────────────────────────── */
+
+.compare-grid-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.compare-grid {
+  width: 100%;
+  border-collapse: collapse;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+}
+
+.compare-grid th,
+.compare-grid td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #30363d;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.compare-grid thead th {
+  background: #1c2128;
+  color: #c9d1d9;
+  font-weight: 600;
+  font-size: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.compare-grid thead th:first-child {
+  min-width: 160px;
+}
+
+.compare-grid .metric-row-label {
+  font-weight: 500;
+  color: #c9d1d9;
+  cursor: pointer;
+  min-width: 160px;
+}
+
+.compare-grid .metric-row-label:hover {
+  color: #58a6ff;
+  text-decoration: underline;
+}
+
+.compare-grid .metric-group-header td {
+  background: #1c2128;
+  color: #8b949e;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 14px;
+  font-weight: 600;
+}
+
+.cell-good {
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+}
+
+.cell-ni {
+  background: rgba(210, 153, 34, 0.15);
+  color: #d29922;
+}
+
+.cell-poor {
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+}
+
+.cell-neutral {
+  background: #0d1117;
+  color: #c9d1d9;
+}
+
+.cell-na {
+  background: #0d1117;
+  color: #484f58;
+  font-style: italic;
+}
+
+.cell-trend-up {
+  color: #f85149;
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.cell-trend-down {
+  color: #3fb950;
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.cell-trend-stable {
+  color: #8b949e;
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.cell-value {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.cell-distribution {
+  font-size: 11px;
+  color: #8b949e;
+  display: flex;
+  gap: 4px;
+}
+
+.cell-distribution .dist-good { color: #3fb950; }
+.cell-distribution .dist-ni { color: #d29922; }
+.cell-distribution .dist-poor { color: #f85149; }
+
+.sparkline-container {
+  width: 60px;
+  height: 20px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+/* ── Fractional Chart Colors ─────────────────────────────────────────── */
+
+.fraction-lcp-text   { fill: #58a6ff; background: #58a6ff; }
+.fraction-lcp-image  { fill: #3fb950; background: #3fb950; }
+.fraction-lcp-video  { fill: #d29922; background: #d29922; }
+
+.fraction-nav-navigate       { fill: #58a6ff; background: #58a6ff; }
+.fraction-nav-navigate_cache { fill: #3fb950; background: #3fb950; }
+.fraction-nav-reload         { fill: #d29922; background: #d29922; }
+.fraction-nav-restore        { fill: #f85149; background: #f85149; }
+.fraction-nav-back_forward   { fill: #bc8cff; background: #bc8cff; }
+.fraction-nav-back_forward_cache { fill: #79c0ff; background: #79c0ff; }
+.fraction-nav-prerender      { fill: #ffa657; background: #ffa657; }
+
+.fraction-ff-phone   { fill: #58a6ff; background: #58a6ff; }
+.fraction-ff-desktop { fill: #3fb950; background: #3fb950; }
+.fraction-ff-tablet  { fill: #d29922; background: #d29922; }

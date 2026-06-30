@@ -49,4 +49,24 @@ export const CRUX_SCHEMA_DDL = [
 
   `CREATE INDEX IF NOT EXISTS idx_crux_history_level
     ON crux_history(query_level, metric_name)`,
+
+  `CREATE TABLE IF NOT EXISTS crux_fractions (
+    id TEXT PRIMARY KEY,
+    query_id TEXT NOT NULL REFERENCES crux_queries(id),
+    form_factor TEXT NOT NULL,
+    metric_name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    collection_start TEXT NOT NULL,
+    collection_end TEXT NOT NULL,
+    fraction_value REAL NOT NULL,
+    source TEXT NOT NULL DEFAULT 'crux_google',
+    query_level TEXT NOT NULL CHECK(query_level IN ('origin', 'url')),
+    UNIQUE(query_id, form_factor, metric_name, category, collection_end)
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_crux_fractions_metric_cat_time
+    ON crux_fractions(metric_name, category, collection_end)`,
+
+  `CREATE INDEX IF NOT EXISTS idx_crux_fractions_query
+    ON crux_fractions(query_id, form_factor, metric_name)`,
 ];

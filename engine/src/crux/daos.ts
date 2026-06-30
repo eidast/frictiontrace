@@ -4,6 +4,7 @@ import type {
   CruxQueryRow,
   CruxCollectionRow,
   CruxHistoryRow,
+  CruxFractionRow,
 } from "./types.js";
 
 function newId(prefix: string): string {
@@ -144,6 +145,49 @@ export const cruxHistoryRepo = {
         const info = insert.run(row);
         return info.changes > 0 ? row : null;
       }).filter((r): r is CruxHistoryRow => r !== null),
+    )();
+  },
+};
+
+export interface CreateCruxFractionInput {
+  query_id: string;
+  form_factor: string;
+  metric_name: string;
+  category: string;
+  collection_start: string;
+  collection_end: string;
+  fraction_value: number;
+  source?: string;
+  query_level: string;
+}
+
+export const cruxFractionsRepo = {
+  insertMany(db: Db, inputs: CreateCruxFractionInput[]): CruxFractionRow[] {
+    const insert = db.prepare(
+      `INSERT OR IGNORE INTO crux_fractions
+        (id, query_id, form_factor, metric_name, category, collection_start, collection_end,
+         fraction_value, source, query_level)
+       VALUES
+        (@id, @query_id, @form_factor, @metric_name, @category, @collection_start, @collection_end,
+         @fraction_value, @source, @query_level)`,
+    );
+    return db.transaction(() =>
+      inputs.map((input) => {
+        const row: CruxFractionRow = {
+          id: newId("cfrac"),
+          query_id: input.query_id,
+          form_factor: input.form_factor,
+          metric_name: input.metric_name,
+          category: input.category,
+          collection_start: input.collection_start,
+          collection_end: input.collection_end,
+          fraction_value: input.fraction_value,
+          source: input.source ?? "crux_google",
+          query_level: input.query_level,
+        };
+        const info = insert.run(row);
+        return info.changes > 0 ? row : null;
+      }).filter((r): r is CruxFractionRow => r !== null),
     )();
   },
 };

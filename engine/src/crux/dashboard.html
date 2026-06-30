@@ -17,6 +17,7 @@
   <!-- Top Bar -->
   <header id="topbar" class="topbar">
     <h1 class="topbar-title">CrUX Dashboard</h1>
+    <div id="active-filters" class="active-filters"></div>
     <div class="topbar-actions">
       <div class="topbar-group">
         <label for="preset-select" class="topbar-label">Presets:</label>
@@ -45,6 +46,11 @@
     <!-- Filter 2: Sitios -->
     <div class="sidebar-section">
       <label class="sidebar-label">Sitios</label>
+      <input type="text" id="site-search" class="sidebar-input" placeholder="Buscar sitio..." style="margin-bottom:6px;">
+      <div class="site-selector-actions">
+        <button id="btn-sites-all" class="selector-action-btn">Todos</button>
+        <button id="btn-sites-none" class="selector-action-btn">Ninguno</button>
+      </div>
       <div id="site-checkboxes" class="scrollable checkbox-group">
         <!-- Populated dynamically -->
       </div>
@@ -64,14 +70,31 @@
 
     <!-- Filter 4: Métrica -->
     <div class="sidebar-section">
-      <label for="filter-metric" class="sidebar-label">Métrica</label>
+      <div class="sidebar-label-row">
+        <label for="filter-metric" class="sidebar-label">Métrica</label>
+        <button id="metric-help" type="button" class="info-tip" aria-label="Explicar métrica">i</button>
+      </div>
       <select id="filter-metric" class="sidebar-select">
         <option value="">Todas las métricas</option>
-        <option value="largest_contentful_paint">LCP</option>
-        <option value="cumulative_layout_shift">CLS</option>
-        <option value="interaction_to_next_paint">INP</option>
-        <option value="first_contentful_paint">FCP</option>
-        <option value="experimental_time_to_first_byte">TTFB</option>
+        <optgroup label="Core Web Vitals">
+          <option value="largest_contentful_paint">LCP</option>
+          <option value="cumulative_layout_shift">CLS</option>
+          <option value="interaction_to_next_paint">INP</option>
+          <option value="first_contentful_paint">FCP</option>
+          <option value="experimental_time_to_first_byte">TTFB</option>
+        </optgroup>
+        <optgroup label="LCP Diagnostics">
+          <option value="largest_contentful_paint_resource_type">LCP Resource Type</option>
+          <option value="largest_contentful_paint_image_time_to_first_byte">LCP Image TTFB</option>
+          <option value="largest_contentful_paint_image_resource_load_delay">LCP Load Delay</option>
+          <option value="largest_contentful_paint_image_resource_load_duration">LCP Load Duration</option>
+          <option value="largest_contentful_paint_image_element_render_delay">LCP Render Delay</option>
+        </optgroup>
+        <optgroup label="Other">
+          <option value="round_trip_time">RTT</option>
+          <option value="navigation_types">Navigation Types</option>
+          <option value="form_factors">Form Factors</option>
+        </optgroup>
       </select>
     </div>
 
@@ -103,6 +126,18 @@
         <span class="date-separator">—</span>
         <input type="date" id="dateTo" class="sidebar-input" title="Fecha fin">
       </div>
+      <div class="date-presets">
+        <button class="date-preset-btn" data-months="1">1m</button>
+        <button class="date-preset-btn" data-months="2">2m</button>
+        <button class="date-preset-btn" data-months="4">4m</button>
+        <button class="date-preset-btn" data-months="6">6m</button>
+        <button class="date-preset-btn date-preset-all" data-months="0">Todo</button>
+      </div>
+    </div>
+
+    <!-- Reset filters -->
+    <div class="sidebar-section">
+      <button id="btn-reset-filters" class="btn" style="width:100%;">Limpiar filtros</button>
     </div>
   </aside>
 
@@ -115,8 +150,12 @@
       <button class="tab-btn" data-tab="grupos">Grupos</button>
       <button class="tab-btn" data-tab="sitios">Sitios</button>
       <button class="tab-btn" data-tab="tendencia">Tendencia</button>
+      <button class="tab-btn" data-tab="comparativa">Comparativa</button>
+      <button class="tab-btn" data-tab="desglose">Desglose</button>
       <button class="tab-btn" data-tab="datos">Datos</button>
     </nav>
+
+    <div id="scope-summary" class="scope-summary"></div>
 
     <!-- Empty State Messages -->
     <div id="empty-no-site" class="empty-state hidden">
@@ -160,6 +199,9 @@
           <!-- Populated dynamically -->
         </div>
       </div>
+      <div id="exec-coverage" class="panel health-panel">
+        <!-- Populated dynamically -->
+      </div>
     </div>
 
     <!-- Tab: Grupos -->
@@ -198,6 +240,40 @@
       </div>
     </div>
 
+    <!-- Tab: Comparativa -->
+    <div id="tab-comparativa" class="tab-content">
+      <div id="empty-comparativa" class="empty-state hidden">
+        <div class="empty-state-icon">&#128202;</div>
+        <p class="empty-state-title">Seleccioná al menos 2 sitios para comparar</p>
+        <p class="empty-state-desc">Usá los checkboxes del panel lateral para seleccionar sitios individuales.</p>
+      </div>
+      <div id="comparison-grid" class="compare-grid-wrapper">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+
+    <!-- Tab: Desglose -->
+    <div id="tab-desglose" class="tab-content">
+      <div id="chart-lcp-resource-type" class="chart-container">
+        <h2 class="panel-title">LCP Resource Type</h2>
+        <div class="chart-body">
+          <!-- D3 stacked bar chart rendered here -->
+        </div>
+      </div>
+      <div id="chart-navigation-types" class="chart-container">
+        <h2 class="panel-title">Navigation Types</h2>
+        <div class="chart-body">
+          <!-- D3 stacked bar chart rendered here -->
+        </div>
+      </div>
+      <div id="chart-form-factors-frac" class="chart-container">
+        <h2 class="panel-title">Form Factors Distribution</h2>
+        <div class="chart-body">
+          <!-- D3 stacked bar chart rendered here -->
+        </div>
+      </div>
+    </div>
+
     <!-- Tab: Datos -->
     <div id="tab-datos" class="tab-content">
       <div class="panel">
@@ -219,6 +295,7 @@
 
   </main>
 
+  <script src="d3.v7.min.js"></script>
   <script src="dashboard.js"></script>
 </body>
 </html>

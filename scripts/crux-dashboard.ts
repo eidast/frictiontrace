@@ -17,6 +17,14 @@ const METRICS = [
   "interaction_to_next_paint",
   "first_contentful_paint",
   "experimental_time_to_first_byte",
+  "largest_contentful_paint_resource_type",
+  "largest_contentful_paint_image_time_to_first_byte",
+  "largest_contentful_paint_image_resource_load_delay",
+  "largest_contentful_paint_image_resource_load_duration",
+  "largest_contentful_paint_image_element_render_delay",
+  "navigation_types",
+  "round_trip_time",
+  "form_factors",
 ];
 
 const MIME: Record<string, string> = {
@@ -100,6 +108,84 @@ function buildWhere(params: URLSearchParams): { clauses: string[]; values: unkno
   return { clauses, values };
 }
 
+function buildFractionWhere(params: URLSearchParams): { clauses: string[]; values: unknown[] } {
+  const clauses: string[] = [];
+  const values: unknown[] = [];
+
+  const group = params.get("group");
+  if (group) {
+    clauses.push("o.group_name = ?");
+    values.push(group);
+  }
+
+  const sites = params.get("sites");
+  if (sites) {
+    const siteList = sites.split(",").filter(Boolean);
+    if (siteList.length > 0) {
+      clauses.push(`o.origin IN (${siteList.map(() => "?").join(",")})`);
+      values.push(...siteList);
+    }
+  }
+
+  const metric = params.get("metric");
+  if (metric) {
+    clauses.push("f.metric_name = ?");
+    values.push(metric);
+  }
+
+  const ff = params.get("ff");
+  if (ff) {
+    clauses.push("f.form_factor = ?");
+    values.push(ff);
+  }
+
+  const page = params.get("page");
+  if (page) {
+    clauses.push("q.page_type = ?");
+    values.push(page);
+  }
+
+  const level = params.get("level");
+  if (level === "url" || level === "origin") {
+    clauses.push("f.query_level = ?");
+    values.push(level);
+  }
+
+  const dateFrom = params.get("dateFrom");
+  if (dateFrom) {
+    clauses.push("f.collection_end >= ?");
+    values.push(dateFrom);
+  }
+
+  const dateTo = params.get("dateTo");
+  if (dateTo) {
+    clauses.push("f.collection_start <= ?");
+    values.push(dateTo);
+  }
+
+  return { clauses, values };
+}
+
+function removeWhereClause(
+  where: { clauses: string[]; values: unknown[] },
+  clauseToRemove: string,
+): { clauses: string[]; values: unknown[] } {
+  const clauses: string[] = [];
+  const values: unknown[] = [];
+  let valueIdx = 0;
+
+  for (const clause of where.clauses) {
+    const valueCount = (clause.match(/\?/g) ?? []).length;
+    const clauseValues = where.values.slice(valueIdx, valueIdx + valueCount);
+    valueIdx += valueCount;
+    if (clause === clauseToRemove) continue;
+    clauses.push(clause);
+    values.push(...clauseValues);
+  }
+
+  return { clauses, values };
+}
+
 function serveStatic(res: ServerResponse, filePath: string, mime: string): void {
   try {
     const content = readFileSync(filePath, "utf-8");
@@ -171,7 +257,17 @@ function getDashboardData(db: CruxDb): unknown {
     FROM crux_history
   `).get() as { min_date: string; max_date: string };
 
-  return { origins, snapshot, timeseries, dateRange };
+  const fractions = db.prepare(`
+    SELECT o.origin, o.label, o.group_name, q.page_type, q.query_level,
+           f.metric_name, f.form_factor, f.category, f.fraction_value,
+           f.collection_start, f.collection_end
+    FROM crux_fractions f
+    JOIN crux_queries q ON f.query_id = q.id
+    JOIN crux_origins o ON q.origin_id = o.id
+    ORDER BY f.collection_end ASC
+  `).all();
+
+  return { origins, snapshot, timeseries, dateRange, fractions };
 }
 
 function handleApi(req: IncomingMessage, res: ServerResponse, db: CruxDb): void {
@@ -300,7 +396,29 @@ function handleApi(req: IncomingMessage, res: ServerResponse, db: CruxDb): void 
         ORDER BY o.label, h.metric_name, h.collection_end
       `).all(...values) as Array<Record<string, unknown>>;
 
-      const headers = ["Site", "Origin", "Group", "Page", "Level", "Metric", "FF", "p75", "Good%", "NI%", "Poor%", "Period End"];
+      const today = new Date().toISOString().slice(0, 10);
+      const headers = ["Site", "Origin", "Group", "Page", "Level", "Metric", "FF", "p75", "Good%", "NI%", "Poor%", "Category", "Fraction", "Period End"];
+
+      const fractionWhere = buildFractionWhere(params);
+      const fractionWhereClause = fractionWhere.clauses.length > 0 ? `WHERE ${fractionWhere.clauses.join(" AND ")}` : "";
+      const fracRows = db.prepare(`
+        SELECT o.label, o.origin, o.group_name, q.page_type, f.query_level,
+               f.metric_name, f.form_factor, f.category, f.fraction_value, f.collection_end
+        FROM crux_fractions f
+        JOIN crux_queries q ON f.query_id = q.id
+        JOIN crux_origins o ON q.origin_id = o.id
+        ${fractionWhereClause}
+        ORDER BY o.label, f.metric_name, f.category, f.collection_end
+      `).all(...fractionWhere.values) as Array<Record<string, unknown>>;
+
+      const metaLines = [
+        "# CrUX Dashboard Export",
+        `# Date: ${today}`,
+        "# Source: crux.db",
+        `# Records (histogram): ${rows.length}`,
+        `# Records (fractions): ${fracRows.length}`,
+        "#"
+      ];
       const csvRows = [headers.join(",")];
       for (const r of rows) {
         csvRows.push([
@@ -315,16 +433,35 @@ function handleApi(req: IncomingMessage, res: ServerResponse, db: CruxDb): void 
           r.good_pct ?? "",
           r.ni_pct ?? "",
           r.poor_pct ?? "",
+          "",
+          "",
+          r.collection_end,
+        ].join(","));
+      }
+      for (const r of fracRows) {
+        csvRows.push([
+          `"${r.label ?? ""}"`,
+          r.origin,
+          r.group_name,
+          r.page_type,
+          r.query_level,
+          r.metric_name,
+          r.form_factor,
+          "",
+          "",
+          "",
+          "",
+          r.category,
+          r.fraction_value,
           r.collection_end,
         ].join(","));
       }
 
-      const today = new Date().toISOString().slice(0, 10);
       res.writeHead(200, {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="crux-export-${today}.csv"`,
       });
-      res.end(csvRows.join("\n"));
+      res.end(metaLines.concat(csvRows).join("\n"));
       return;
     }
 
@@ -343,12 +480,117 @@ function handleApi(req: IncomingMessage, res: ServerResponse, db: CruxDb): void 
         ORDER BY o.label, h.metric_name, h.collection_end
       `).all(...values);
 
-      const today = new Date().toISOString().slice(0, 10);
+      const todayJson = new Date().toISOString().slice(0, 10);
+      const meta = {
+        exported_at: new Date().toISOString(),
+        source: "crux.db",
+        record_count: rows.length
+      };
       res.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8",
-        "Content-Disposition": `attachment; filename="crux-export-${today}.json"`,
+        "Content-Disposition": `attachment; filename="crux-export-${todayJson}.json"`,
       });
-      res.end(JSON.stringify(rows, null, 2));
+
+      const fractionWhere = buildFractionWhere(params);
+      const fractionWhereClause = fractionWhere.clauses.length > 0 ? `WHERE ${fractionWhere.clauses.join(" AND ")}` : "";
+      const fracRows = db.prepare(`
+        SELECT o.label, o.origin, o.group_name, q.page_type, f.query_level,
+               f.metric_name, f.form_factor, f.category, f.fraction_value, f.collection_end
+        FROM crux_fractions f
+        JOIN crux_queries q ON f.query_id = q.id
+        JOIN crux_origins o ON q.origin_id = o.id
+        ${fractionWhereClause}
+        ORDER BY o.label, f.metric_name, f.category, f.collection_end
+      `).all(...fractionWhere.values);
+
+      res.end(JSON.stringify({ _metadata: meta, data: rows, fractions: fracRows }, null, 2));
+      return;
+    }
+
+    if (path === "/api/fractions") {
+      const { clauses, values } = buildFractionWhere(params);
+      const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+
+      const rows = db.prepare(`
+        SELECT o.label, o.origin, o.group_name, q.page_type, f.query_level,
+               f.metric_name, f.form_factor, f.category, f.fraction_value,
+               f.collection_end
+        FROM crux_fractions f
+        JOIN crux_queries q ON f.query_id = q.id
+        JOIN crux_origins o ON q.origin_id = o.id
+        ${whereClause}
+        ORDER BY f.collection_end DESC
+      `).all(...values);
+
+      json(res, rows);
+      return;
+    }
+
+    if (path === "/api/compare-grid") {
+      const histogramWhere = removeWhereClause(buildWhere(params), "h.metric_name = ?");
+      const fractionWhere = removeWhereClause(buildFractionWhere(params), "f.metric_name = ?");
+
+      const metric = params.get("metric") ?? "largest_contentful_paint";
+      const metricMeta = METRICS.includes(metric) ? metric : "largest_contentful_paint";
+      const hWhereClause = histogramWhere.clauses.length > 0 ? `WHERE ${histogramWhere.clauses.join(" AND ")} AND h.metric_name = ?` : "WHERE h.metric_name = ?";
+      const fWhereClause = fractionWhere.clauses.length > 0 ? `WHERE ${fractionWhere.clauses.join(" AND ")} AND f.metric_name = ?` : "WHERE f.metric_name = ?";
+
+      const hRows = db.prepare(`
+        SELECT o.label, o.origin, o.group_name, h.metric_name, h.form_factor,
+               h.p75_value, h.good_pct, h.ni_pct, h.poor_pct, h.collection_end
+        FROM crux_history h
+        JOIN crux_queries q ON h.query_id = q.id
+        JOIN crux_origins o ON q.origin_id = o.id
+        ${hWhereClause}
+        ORDER BY h.collection_end ASC
+      `).all(...histogramWhere.values, metricMeta);
+
+      const fRows = db.prepare(`
+        SELECT o.label, o.origin, o.group_name, f.metric_name, f.form_factor,
+               f.category, f.fraction_value, f.collection_end
+        FROM crux_fractions f
+        JOIN crux_queries q ON f.query_id = q.id
+        JOIN crux_origins o ON q.origin_id = o.id
+        ${fWhereClause}
+        ORDER BY f.collection_end ASC
+      `).all(...fractionWhere.values, metricMeta);
+
+      const periodInfo = db.prepare(`
+        SELECT DISTINCT collection_end FROM crux_history ORDER BY collection_end DESC LIMIT 2
+      `).all() as Array<{ collection_end: string }>;
+
+      const currPeriod = periodInfo[0]?.collection_end ?? null;
+      const prevPeriod = periodInfo[1]?.collection_end ?? null;
+
+      json(res, {
+        metrics: [{ name: metricMeta, data: hRows }],
+        fractions: fRows,
+        periods: { current: currPeriod, previous: prevPeriod },
+      });
+      return;
+    }
+
+    if (path === "/api/meta") {
+      const maxDate = db.prepare("SELECT MAX(collection_end) as max_date FROM crux_history").get() as { max_date: string };
+      const urlCount = (db.prepare("SELECT COUNT(*) as cnt FROM crux_history WHERE query_level = 'url'").get() as { cnt: number }).cnt;
+      const originCount = (db.prepare("SELECT COUNT(*) as cnt FROM crux_history WHERE query_level = 'origin'").get() as { cnt: number }).cnt;
+      const total = urlCount + originCount;
+      const periodCount = (db.prepare("SELECT COUNT(DISTINCT collection_end) as cnt FROM crux_history").get() as { cnt: number }).cnt;
+      const totalSites = (db.prepare("SELECT COUNT(*) as cnt FROM crux_origins").get() as { cnt: number }).cnt;
+      const sitesWithData = (db.prepare("SELECT COUNT(DISTINCT o.id) as cnt FROM crux_origins o JOIN crux_queries q ON q.origin_id = o.id JOIN crux_history h ON h.query_id = q.id").get() as { cnt: number }).cnt;
+      const fracCount = (db.prepare("SELECT COUNT(*) as cnt FROM crux_fractions").get() as { cnt: number }).cnt;
+      const fracMetrics = db.prepare("SELECT DISTINCT metric_name FROM crux_fractions").all() as Array<{ metric_name: string }>;
+
+      json(res, {
+        max_date: maxDate?.max_date || null,
+        url_pct: total > 0 ? (urlCount / total * 100).toFixed(1) : 0,
+        origin_pct: total > 0 ? (originCount / total * 100).toFixed(1) : 0,
+        period_count: periodCount,
+        sites_with_data: sitesWithData,
+        total_sites: totalSites,
+        fraction_count: fracCount,
+        fraction_metrics: fracMetrics.map((r) => r.metric_name),
+      });
       return;
     }
 

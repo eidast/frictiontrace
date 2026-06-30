@@ -18,7 +18,10 @@
     "test:unit": "npm run test:unit -w engine",
     "test:integration": "npm run test:integration -w tests",
     "lint": "echo 'lint not yet configured'",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "crux:dashboard": "npx tsx scripts/crux-dashboard.ts",
+    "crux:dashboard:build": "npx tsx scripts/crux-dashboard.ts --build",
+    "crux:sync": "set -a; . ./.env; set +a; npx tsx scripts/crux-sync.ts"
   },
   "license": "MIT",
   "devDependencies": {

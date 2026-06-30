@@ -36,3 +36,16 @@ export interface CruxHistoryRow {
   source: string;
   query_level: string;
 }
+
+export interface CruxFractionRow {
+  id: string;
+  query_id: string;
+  form_factor: string;
+  metric_name: string;
+  category: string;
+  collection_start: string;
+  collection_end: string;
+  fraction_value: number;
+  source: string;
+  query_level: string;
+}

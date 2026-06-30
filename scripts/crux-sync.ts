@@ -13,17 +13,45 @@ import {
   cruxQueriesRepo,
   cruxCollectionsRepo,
   cruxHistoryRepo,
+  cruxFractionsRepo,
 } from "../engine/src/crux/daos.js";
 
 const CONFIG_PATH = resolve(process.cwd(), "engine", "crux-pages.yaml");
 const API_BASE = "https://chromeuxreport.googleapis.com/v1/records:queryHistoryRecord";
 
-const METRICS = [
+const CORE_METRICS = [
   "largest_contentful_paint",
   "cumulative_layout_shift",
   "interaction_to_next_paint",
   "first_contentful_paint",
   "experimental_time_to_first_byte",
+];
+
+const LCP_SUBPART_METRICS = [
+  "largest_contentful_paint_image_time_to_first_byte",
+  "largest_contentful_paint_image_resource_load_delay",
+  "largest_contentful_paint_image_resource_load_duration",
+  "largest_contentful_paint_image_element_render_delay",
+];
+
+const FRACTION_METRICS = [
+  "largest_contentful_paint_resource_type",
+  "navigation_types",
+];
+
+const RTT_METRIC = ["round_trip_time"];
+
+const FORM_FACTOR_METRIC = ["form_factors"];
+
+const HISTOGRAM_METRICS = [
+  ...CORE_METRICS,
+  ...LCP_SUBPART_METRICS,
+  ...RTT_METRIC,
+];
+
+const METRICS = [
+  ...HISTOGRAM_METRICS,
+  ...FRACTION_METRICS,
 ];
 
 const FORM_FACTORS = ["PHONE", "DESKTOP"] as const;
@@ -35,6 +63,8 @@ interface SyncStats {
   fallbacks: number;
   newPeriods: number;
   skippedPeriods: number;
+  newFractionPeriods: number;
+  skippedFractionPeriods: number;
 }
 
 interface HistoryRecord {
@@ -140,6 +170,68 @@ function parseHistoryResponse(
         ni_pct: niPct,
         poor_pct: poorPct,
       });
+    }
+  }
+
+  return results;
+}
+
+interface FractionRecord {
+  metric_name: string;
+  category: string;
+  collection_start: string;
+  collection_end: string;
+  fraction_value: number;
+}
+
+function parseFractionResponse(
+  responseJson: Record<string, unknown>,
+): FractionRecord[] {
+  const record = responseJson.record as Record<string, unknown> | undefined;
+  if (!record) return [];
+
+  const collectionPeriods = record.collectionPeriods as Array<{
+    firstDate: { year: number; month: number; day: number };
+    lastDate: { year: number; month: number; day: number };
+  }> | undefined;
+  if (!collectionPeriods || collectionPeriods.length === 0) return [];
+
+  const metrics = record.metrics as Record<string, unknown> | undefined;
+  if (!metrics) return [];
+
+  const results: FractionRecord[] = [];
+  const N = collectionPeriods.length;
+
+  for (const metricName of [...FRACTION_METRICS, ...FORM_FACTOR_METRIC]) {
+    const metricData = metrics[metricName] as Record<string, unknown> | undefined;
+    if (!metricData) continue;
+
+    const fractionTimeseries = metricData.fractionTimeseries as
+      | Record<string, { fractions: Array<number | "NaN"> }>
+      | undefined;
+
+    if (!fractionTimeseries) continue;
+
+    for (const [category, ts] of Object.entries(fractionTimeseries)) {
+      const fractions = ts.fractions;
+      if (!fractions || !Array.isArray(fractions)) continue;
+
+      for (let i = 0; i < Math.min(N, fractions.length); i++) {
+        const period = collectionPeriods[i];
+        if (!period) continue;
+
+        const val = fractions[i];
+        if (val === "NaN") continue;
+        if (typeof val !== "number") continue;
+
+        results.push({
+          metric_name: metricName,
+          category,
+          collection_start: dateToString(period.firstDate),
+          collection_end: dateToString(period.lastDate),
+          fraction_value: val,
+        });
+      }
     }
   }
 
@@ -258,6 +350,7 @@ async function syncSite(
         }
 
         persistHistory(db, origin.id, page, queryUrl, queryLevel, ff, historyRecords, stats);
+        persistFractions(db, origin.id, page, queryUrl, queryLevel, ff, originResp, stats);
         continue;
       }
 
@@ -268,8 +361,12 @@ async function syncSite(
       }
 
       persistHistory(db, origin.id, page, queryUrl, queryLevel, ff, historyRecords, stats);
+      persistFractions(db, origin.id, page, queryUrl, queryLevel, ff, resp, stats);
       stats.success++;
     }
+
+    // Fetch form_factors separately (only returned when no formFactor specified)
+    await syncFormFactors(db, apiKey, origin.id, page, site.origin, stats);
   }
 }
 
@@ -313,6 +410,120 @@ function persistHistory(
   stats.skippedPeriods += inputs.length - inserted.length;
 }
 
+function persistFractions(
+  db: CruxDb,
+  originId: string,
+  page: CruxPageEntryT,
+  queryUrl: string,
+  queryLevel: string,
+  formFactor: string,
+  respJson: Record<string, unknown>,
+  stats: SyncStats,
+): void {
+  const fractionRecords = parseFractionResponse(respJson);
+  if (fractionRecords.length === 0) return;
+
+  const query = cruxQueriesRepo.upsert(db, {
+    origin_id: originId,
+    url: queryUrl,
+    page_type: page.type,
+    query_level: queryLevel,
+  });
+
+  const inputs = fractionRecords.map((r) => ({
+    query_id: query.id,
+    form_factor: formFactor,
+    metric_name: r.metric_name,
+    category: r.category,
+    collection_start: r.collection_start,
+    collection_end: r.collection_end,
+    fraction_value: r.fraction_value,
+    query_level: queryLevel,
+  }));
+
+  const inserted = cruxFractionsRepo.insertMany(db, inputs);
+  stats.newFractionPeriods += inserted.length;
+  stats.skippedFractionPeriods += inputs.length - inserted.length;
+}
+
+async function syncFormFactors(
+  db: CruxDb,
+  apiKey: string,
+  originId: string,
+  page: CruxPageEntryT,
+  siteOrigin: string,
+  stats: SyncStats,
+): Promise<void> {
+  const urlBody = {
+    url: page.url!,
+    collectionPeriodCount: 40,
+  };
+
+  stats.total++;
+  const resp = await fetchWithRetry(`${API_BASE}?key=${apiKey}`, urlBody);
+
+  if ((resp as Record<string, unknown>).error) {
+    const originBody = {
+      origin: `https://${siteOrigin}`,
+      collectionPeriodCount: 40,
+    };
+
+    stats.total++;
+    const originResp = await fetchWithRetry(`${API_BASE}?key=${apiKey}`, originBody);
+
+    if ((originResp as Record<string, unknown>).error) {
+      return;
+    }
+
+    const query = cruxQueriesRepo.upsert(db, {
+      origin_id: originId,
+      url: `https://${siteOrigin}`,
+      page_type: page.type,
+      query_level: "origin",
+    });
+
+    const formFactorRecords = parseFractionResponse(originResp);
+    const inputs = formFactorRecords.map((r) => ({
+      query_id: query.id,
+      form_factor: "ALL",
+      metric_name: r.metric_name,
+      category: r.category,
+      collection_start: r.collection_start,
+      collection_end: r.collection_end,
+      fraction_value: r.fraction_value,
+      query_level: "origin",
+    }));
+
+    const inserted = cruxFractionsRepo.insertMany(db, inputs);
+    stats.newFractionPeriods += inserted.length;
+    stats.skippedFractionPeriods += inputs.length - inserted.length;
+    return;
+  }
+
+  const query = cruxQueriesRepo.upsert(db, {
+    origin_id: originId,
+    url: page.url!,
+    page_type: page.type,
+    query_level: "url",
+  });
+
+  const formFactorRecords = parseFractionResponse(resp);
+  const inputs = formFactorRecords.map((r) => ({
+    query_id: query.id,
+    form_factor: "ALL",
+    metric_name: r.metric_name,
+    category: r.category,
+    collection_start: r.collection_start,
+    collection_end: r.collection_end,
+    fraction_value: r.fraction_value,
+    query_level: "url",
+  }));
+
+  const inserted = cruxFractionsRepo.insertMany(db, inputs);
+  stats.newFractionPeriods += inserted.length;
+  stats.skippedFractionPeriods += inputs.length - inserted.length;
+}
+
 async function main(): Promise<void> {
   const raw = readFileSync(CONFIG_PATH, "utf-8");
   const parsed = parseYaml(raw);
@@ -336,7 +547,7 @@ async function main(): Promise<void> {
   console.log(`Estimated queries: ${totalQueries} (max, with fallbacks)\n`);
 
   const db = openCruxDb();
-  const stats: SyncStats = { total: 0, success: 0, failed: 0, fallbacks: 0, newPeriods: 0, skippedPeriods: 0 };
+  const stats: SyncStats = { total: 0, success: 0, failed: 0, fallbacks: 0, newPeriods: 0, skippedPeriods: 0, newFractionPeriods: 0, skippedFractionPeriods: 0 };
 
   try {
     for (const site of config.sites) {
