@@ -19,6 +19,14 @@ export async function navigateStep(page: Page, step: StepT, baseUrl: string): Pr
       waitUntil: mapWaitFor(step.waitFor),
       timeout: step.timeoutMs,
     });
+    // "selector" has no Playwright waitUntil equivalent: load first, then
+    // wait for the step's selector to become visible.
+    if (step.waitFor === "selector" && step.selector) {
+      await page.waitForSelector(step.selector, {
+        state: "visible",
+        timeout: step.timeoutMs,
+      });
+    }
     return {
       ok: true,
       status: response?.status() ?? null,

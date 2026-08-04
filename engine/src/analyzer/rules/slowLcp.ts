@@ -19,7 +19,10 @@ export function runSlowLcpRule(db: Db, runId: string): IssueRow[] {
     )
     .all(runId) as Array<{ id: string; payload_json: string }>;
 
-  const out: IssueRow[] = [];
+  // LCP observers fire repeatedly with updated values of the same metric, so a
+  // run may hold several lcp signals (and older run DBs hold duplicates).
+  // Evaluate the maximum observed LCP and emit at most one issue per run.
+  let max: { id: string; payload: LcpPayload; value: number } | null = null;
   for (const r of rows) {
     let payload: LcpPayload;
     try {
@@ -29,14 +32,18 @@ export function runSlowLcpRule(db: Db, runId: string): IssueRow[] {
     }
     const v = payload.value;
     if (typeof v !== "number" || v <= LCP_THRESHOLD_MS) continue;
-    out.push(
-      issuesRepo.insert(db, runId, {
-        kind: "slow_lcp",
-        severity: resolveSeverity("slow_lcp", payload),
-        summary: `LCP ${Math.round(v)}ms on ${payload.url ?? "page"} (threshold ${LCP_THRESHOLD_MS}ms)`,
-        evidence: [r.id],
-      }),
-    );
+    if (!max || v > max.value) {
+      max = { id: r.id, payload, value: v };
+    }
   }
-  return out;
+  if (!max) return [];
+
+  return [
+    issuesRepo.insert(db, runId, {
+      kind: "slow_lcp",
+      severity: resolveSeverity("slow_lcp", max.payload),
+      summary: `LCP ${Math.round(max.value)}ms on ${max.payload.url ?? "page"} (threshold ${LCP_THRESHOLD_MS}ms)`,
+      evidence: [max.id],
+    }),
+  ];
 }

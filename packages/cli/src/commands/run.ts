@@ -4,7 +4,7 @@ import { readFileSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { runsBaseDir, openRunDb, closeRunDb, runsRepo, stepsRepo } from "@frictiontrace/engine/storage";
 import { validateJourney, navigateStep, interactStep, extractAndClickStep, type JourneyConfigT } from "@frictiontrace/engine/journey";
-import { attachAllSignals, captureDomUx, captureStorageConsent, captureSecurity, buildThirdPartyInventory, captureStepScreenshots } from "@frictiontrace/engine/signals";
+import { attachAllSignals, drainWebVitals, captureDomUx, captureStorageConsent, captureSecurity, buildThirdPartyInventory, captureStepScreenshots } from "@frictiontrace/engine/signals";
 import { analyzeRun } from "@frictiontrace/engine/analyzer";
 import { writeHar, captureMhtml, startTrace, stopTrace } from "@frictiontrace/engine/artifacts";
 import { renderReport } from "@frictiontrace/engine/render";
@@ -88,6 +88,10 @@ export async function runCommand(url: string, opts: RunOptions = {}): Promise<nu
     if (stepResult.stepsFailed > 0 || stepResult.stepsTimedOut > 0) {
       hasWarnings = true;
     }
+
+    // Final vitals flush: the 1s drain interval stops with the page, so
+    // anything captured since the last flush would be lost.
+    await drainWebVitals(page, db, runId);
 
     const tpEntries = buildThirdPartyInventory(db, runId, parsedUrl.hostname);
     logger.info(`third-party domains: ${tpEntries.length}`);

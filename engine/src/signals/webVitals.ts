@@ -18,7 +18,14 @@ export async function attachWebVitals(page: Page, db: Db, runId: string): Promis
     };
     w.__ftVitals__ = w.__ftVitals__ ?? [];
 
+    // Cumulative metrics (lcp, cls) fire repeatedly with updated values of the
+    // same measurement — keep only the latest unflushed entry. Event-style
+    // metrics (long_task, inp, fcp) append: each entry is a distinct event.
+    const LATEST_WINS = new Set(["lcp", "cls"]);
     const push = (type: string, value: number, payload?: unknown) => {
+      if (LATEST_WINS.has(type)) {
+        w.__ftVitals__ = w.__ftVitals__!.filter((e) => e.type !== type);
+      }
       w.__ftVitals__!.push({ type, value, payload, at: Date.now() });
     };
 
@@ -78,16 +85,28 @@ export async function attachWebVitals(page: Page, db: Db, runId: string): Promis
       // ignore
     }
 
-    // Navigation timing
+    // Navigation timing. Fields like domContentLoadedEventEnd/loadEventEnd are
+    // 0 until their events fire, so only persist values > 0, and re-capture
+    // once the window load event fires (or immediately if already complete).
+    const pushNavTiming = () => {
+      try {
+        const nav = performance.getEntriesByType("navigation")[0] as
+          | (PerformanceNavigationTiming & { responseStart?: number })
+          | undefined;
+        if (!nav) return;
+        if (typeof nav.responseStart === "number" && nav.responseStart > 0) push("ttfb", nav.responseStart);
+        if (nav.domContentLoadedEventEnd > 0) push("dcl", nav.domContentLoadedEventEnd);
+        if (nav.loadEventEnd > 0) push("load", nav.loadEventEnd);
+        if (nav.domInteractive > 0) push("tti", nav.domInteractive);
+      } catch {
+        // ignore
+      }
+    };
     try {
-      const nav = performance.getEntriesByType("navigation")[0] as
-        | (PerformanceNavigationTiming & { responseStart?: number })
-        | undefined;
-      if (nav) {
-        if (typeof nav.responseStart === "number") push("ttfb", nav.responseStart);
-        if (typeof nav.domContentLoadedEventEnd === "number") push("dcl", nav.domContentLoadedEventEnd);
-        if (typeof nav.loadEventEnd === "number") push("load", nav.loadEventEnd);
-        if (typeof nav.domInteractive === "number") push("tti", nav.domInteractive);
+      if (document.readyState === "complete") {
+        pushNavTiming();
+      } else {
+        window.addEventListener("load", pushNavTiming, { once: true });
       }
     } catch {
       // ignore
@@ -108,29 +127,36 @@ export async function attachWebVitals(page: Page, db: Db, runId: string): Promis
     }
   });
 
-  const drain = async (): Promise<void> => {
-    try {
-      const collected = await page.evaluate(() => {
-        const w = window as unknown as { __ftVitals__?: Array<{ type: string; value: number; payload?: unknown; at: number }> };
-        const out = w.__ftVitals__ ?? [];
-        w.__ftVitals__ = [];
-        return out;
-      });
-      if (collected.length > 0) {
-        for (const entry of collected) {
-          signalsRepo.insert(db, runId, {
-            category: "web_vitals",
-            type: entry.type,
-            payload: { value: entry.value, ...(entry.payload as object ?? {}) },
-            captured_at: entry.at,
-          });
-        }
-      }
-    } catch {
-      // Page might be navigating — ignore
-    }
-  };
-
-  const interval = setInterval(() => void drain(), 1000);
+  const interval = setInterval(() => void drainWebVitals(page, db, runId), 1000);
   page.on("close", () => clearInterval(interval));
 }
+
+/**
+ * Flush buffered vitals from the page into SQLite. Called on a 1s interval by
+ * attachWebVitals, and must be called once more after the last journey step,
+ * before the page/context closes — a closed page can no longer be evaluated,
+ * so this cannot run from a "close" handler.
+ */
+export async function drainWebVitals(page: Page, db: Db, runId: string): Promise<void> {
+  try {
+    const collected = await page.evaluate(() => {
+      const w = window as unknown as { __ftVitals__?: Array<{ type: string; value: number; payload?: unknown; at: number }> };
+      const out = w.__ftVitals__ ?? [];
+      w.__ftVitals__ = [];
+      return out;
+    });
+    if (collected.length > 0) {
+      for (const entry of collected) {
+        signalsRepo.insert(db, runId, {
+          category: "web_vitals",
+          type: entry.type,
+          payload: { value: entry.value, ...(entry.payload as object ?? {}) },
+          captured_at: entry.at,
+        });
+      }
+    }
+  } catch {
+    // Page might be navigating — ignore
+  }
+}
+

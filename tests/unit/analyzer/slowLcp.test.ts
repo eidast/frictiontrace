@@ -42,4 +42,20 @@ describe("slowLcp rule", () => {
       }
     });
   }
+
+  it("multiple over-threshold lcp signals produce exactly one issue with the max value", () => {
+    const ids: string[] = [];
+    for (const value of [2600, 5100, 3400]) {
+      const row = signalsRepo.insert(db, runId, {
+        category: "web_vitals",
+        type: "lcp",
+        payload: { value, url: "https://shop.test/" },
+      });
+      ids.push(row.id);
+    }
+    const issues = runSlowLcpRule(db, runId);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]!.summary).toContain("5100ms");
+    expect(JSON.parse(issues[0]!.evidence_json)).toEqual([ids[1]]);
+  });
 });

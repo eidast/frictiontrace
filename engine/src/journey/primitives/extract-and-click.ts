@@ -24,10 +24,9 @@ export async function extractAndClickStep(
   }
   const href = await loc.getAttribute("href").catch(() => null);
   try {
-    await Promise.race([
-      loc.click({ timeout: step.timeoutMs }),
-      page.waitForTimeout(step.timeoutMs),
-    ]);
+    // click() rejects on its own timeout — do not race it against
+    // waitForTimeout, which resolves and would mask a hung click.
+    await loc.click({ timeout: step.timeoutMs });
     return { ok: true, href };
   } catch {
     return { ok: false, href };
