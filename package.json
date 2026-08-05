@@ -22,9 +22,14 @@
     "crux:dashboard": "npx tsx scripts/crux-dashboard.ts",
     "crux:dashboard:build": "npx tsx scripts/crux-dashboard.ts --build",
     "crux:sync": "set -a; . ./.env; set +a; npx tsx scripts/crux-sync.ts",
-    "crux:group-report": "npx tsx scripts/crux-group-report.ts"
+    "crux:group-report": "npx tsx scripts/crux-group-report.ts",
+    "synthetic:run": "npx tsx scripts/synthetic-run.ts"
   },
   "license": "MIT",
+  "dependencies": {
+    "chrome-launcher": "^1.2.1",
+    "lighthouse": "^13.4.1"
+  },
   "devDependencies": {
     "tsx": "^4.22.4"
   }

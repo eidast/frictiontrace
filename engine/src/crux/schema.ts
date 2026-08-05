@@ -69,4 +69,34 @@ export const CRUX_SCHEMA_DDL = [
 
   `CREATE INDEX IF NOT EXISTS idx_crux_fractions_query
     ON crux_fractions(query_id, form_factor, metric_name)`,
+
+  `CREATE TABLE IF NOT EXISTS synthetic_runs (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    suite_version TEXT NOT NULL,
+    label TEXT NOT NULL DEFAULT '',
+    config_hash TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    group_name TEXT NOT NULL,
+    page_type TEXT NOT NULL,
+    url TEXT NOT NULL,
+    form_factor TEXT NOT NULL DEFAULT 'mobile',
+    lcp_ms REAL,
+    fcp_ms REAL,
+    cls REAL,
+    tbt_ms REAL,
+    speed_index_ms REAL,
+    ttfb_ms REAL,
+    total_byte_weight REAL,
+    performance_score REAL,
+    lighthouse_version TEXT,
+    fetched_at INTEGER NOT NULL,
+    excluded INTEGER NOT NULL DEFAULT 0
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_synthetic_runs_run_id
+    ON synthetic_runs(run_id)`,
+
+  `CREATE INDEX IF NOT EXISTS idx_synthetic_runs_origin_page
+    ON synthetic_runs(origin, page_type)`,
 ];

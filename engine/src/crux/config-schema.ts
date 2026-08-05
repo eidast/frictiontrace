@@ -13,6 +13,7 @@ export type GroupName = z.infer<typeof GroupName>;
 export const CruxPageEntry = z.object({
   type: PageType,
   url: z.string().url().nullable(),
+  enabled: z.boolean().default(true),
 });
 
 export const CruxSiteConfig = z.object({
@@ -20,6 +21,7 @@ export const CruxSiteConfig = z.object({
   group: GroupName,
   label: z.string().min(1),
   country: z.string().length(2),
+  enabled: z.boolean().default(true),
   pages: z.array(CruxPageEntry).min(1),
 });
 
