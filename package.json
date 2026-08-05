@@ -21,7 +21,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "crux:dashboard": "npx tsx scripts/crux-dashboard.ts",
     "crux:dashboard:build": "npx tsx scripts/crux-dashboard.ts --build",
-    "crux:sync": "set -a; . ./.env; set +a; npx tsx scripts/crux-sync.ts"
+    "crux:sync": "set -a; . ./.env; set +a; npx tsx scripts/crux-sync.ts",
+    "crux:group-report": "npx tsx scripts/crux-group-report.ts"
   },
   "license": "MIT",
   "devDependencies": {
