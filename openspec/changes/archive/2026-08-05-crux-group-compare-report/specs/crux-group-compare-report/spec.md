@@ -68,3 +68,14 @@ The report SHALL include, after the cohort summary tables, one heatmap table per
 #### Scenario: Missing site value renders as empty
 - **WHEN** a site has no p75 value for a metric on a page type
 - **THEN** the corresponding heatmap cell renders as "—" without color
+
+### Requirement: Report tables are sortable by column
+All data tables in the report (cohort summaries, field and lab heatmaps) SHALL allow sorting rows by clicking a column header: first click sorts ascending, second click descending, using the underlying numeric value (not the formatted text). Sorting MUST be implemented with inline JavaScript and `data-*` attributes so the report remains a single self-contained HTML file with no external dependencies. The metric/site label column MUST remain the first column and is not sortable.
+
+#### Scenario: Sort heatmap by LCP ascending
+- **WHEN** the user clicks the "LCP" header of a heatmap table
+- **THEN** site rows reorder from lowest to highest LCP, and clicking again reverses the order
+
+#### Scenario: Report still works offline
+- **WHEN** the report is opened without network access
+- **THEN** column sorting works because the script is inlined in the HTML

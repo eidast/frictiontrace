@@ -13,3 +13,4 @@
 - [x] 1.11 Replace the average column with the median of site p75 values, and add a "% bueno" column per cohort = percentage of sites rated "good" for the metric (colored ≥75% good / ≥50% NI / else poor).
 - [x] 1.12 Add a heatmap section ("Semáforo") per page type: rows = individual sites grouped by cohort, columns = the 5 metrics, cells colored with the same CWV rating scale showing the site p75 value.
 - [x] 1.13 Replace the flat 3-color scale with a graduated scale: green→amber→red interpolation between good and poor thresholds, progressively darker red beyond poor (capped at 2× poor), with automatic text contrast; add a gradient bar to the legend.
+- [x] 1.14 Make all data tables sortable: clicking a column header sorts rows by that column (numeric-aware, asc/desc toggle), via a small inline JS snippet with data attributes on cells; the report remains self-contained.

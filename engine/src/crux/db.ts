@@ -32,4 +32,15 @@ function applySchema(db: CruxDb): void {
     }
   });
   tx();
+
+  // Additive migration for databases created before throttling_profile existed:
+  // CREATE TABLE IF NOT EXISTS does not add columns to an existing table.
+  // Default 'slow4g' labels pre-migration rows with the profile they actually used
+  // (Lighthouse's previous default).
+  const columns = db.prepare("PRAGMA table_info(synthetic_runs)").all() as Array<{ name: string }>;
+  if (columns.length > 0 && !columns.some((c) => c.name === "throttling_profile")) {
+    db.exec(
+      "ALTER TABLE synthetic_runs ADD COLUMN throttling_profile TEXT NOT NULL DEFAULT 'slow4g'"
+    );
+  }
 }

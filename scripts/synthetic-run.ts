@@ -25,6 +25,12 @@ Options:
   --suite-version <v>    Suite version tag (default: v1)
   --concurrency <n>      Parallel workers, each in its own process with its own
                          Chrome instance (integer, default 1 = sequential, max 4)
+  --throttling-profile <name>
+                         Simulated throttling profile (default: fast4g):
+                           fast4g  RTT 60 ms, 9 Mbps down / 1.5 Mbps up, 2x CPU
+                                   (realistic median mobile, Central America 2026)
+                           slow4g  RTT 150 ms, 1.6 Mbps down / 0.75 Mbps up, 4x CPU
+                                   (Lighthouse default, kept as stress test)
   --list                 List past runs and exit
   --exclude <run_id>     Mark all rows of a run as excluded and exit
   --include <run_id>     Clear the excluded flag for all rows of a run and exit
@@ -37,6 +43,7 @@ interface CliArgs {
   label: string;
   suiteVersion: string;
   concurrency: number;
+  throttlingProfile: string;
   list: boolean;
   exclude?: string;
   include?: string;
@@ -79,6 +86,44 @@ interface WireTarget {
 
 const MAX_CONCURRENCY = 4;
 
+interface ThrottlingProfile {
+  rttMs: number;
+  throughputKbps: number;
+  uploadThroughputKbps: number;
+  cpuSlowdownMultiplier: number;
+}
+
+// Simulated throttling profiles. fast4g is the default: a realistic median
+// mobile user in Central America 2026. slow4g is Lighthouse's built-in default,
+// kept as a stress test.
+const THROTTLING_PROFILES: Record<string, ThrottlingProfile> = {
+  fast4g: {
+    rttMs: 60,
+    throughputKbps: 9216,
+    uploadThroughputKbps: 1536,
+    cpuSlowdownMultiplier: 2,
+  },
+  slow4g: {
+    rttMs: 150,
+    throughputKbps: 1638,
+    uploadThroughputKbps: 750,
+    cpuSlowdownMultiplier: 4,
+  },
+};
+
+const DEFAULT_THROTTLING_PROFILE = "fast4g";
+
+function parseThrottlingProfile(raw: string | undefined): string {
+  const name = raw ?? "";
+  if (!(name in THROTTLING_PROFILES)) {
+    console.error(
+      `Error: unknown throttling profile "${name}". Valid profiles: ${Object.keys(THROTTLING_PROFILES).join(", ")}.`
+    );
+    process.exit(1);
+  }
+  return name;
+}
+
 function parseConcurrency(raw: string | undefined): number {
   const value = Number(raw);
   if (raw === undefined || raw === "" || !Number.isInteger(value) || value < 1) {
@@ -95,6 +140,7 @@ function parseArgs(argv: string[]): CliArgs {
     label: "",
     suiteVersion: "v1",
     concurrency: 1,
+    throttlingProfile: DEFAULT_THROTTLING_PROFILE,
     list: false,
     help: false,
   };
@@ -115,6 +161,9 @@ function parseArgs(argv: string[]): CliArgs {
         break;
       case "--concurrency":
         args.concurrency = parseConcurrency(argv[++i]);
+        break;
+      case "--throttling-profile":
+        args.throttlingProfile = parseThrottlingProfile(argv[++i]);
         break;
       case "--list":
         args.list = true;
@@ -230,7 +279,7 @@ function metricValue(result: any, auditId: string): number | null {
   return typeof value === "number" ? value : null;
 }
 
-async function runAudit(url: string, port: number): Promise<AuditMetrics> {
+async function runAudit(url: string, port: number, profile: ThrottlingProfile): Promise<AuditMetrics> {
   const result = await lighthouse(url, {
     port,
     output: "json",
@@ -244,6 +293,12 @@ async function runAudit(url: string, port: number): Promise<AuditMetrics> {
       disabled: false,
     },
     throttlingMethod: "simulate",
+    throttling: {
+      rttMs: profile.rttMs,
+      throughputKbps: profile.throughputKbps,
+      uploadThroughputKbps: profile.uploadThroughputKbps,
+      cpuSlowdownMultiplier: profile.cpuSlowdownMultiplier,
+    },
     onlyCategories: ["performance"],
   } as any);
 
@@ -284,6 +339,12 @@ async function runAudit(url: string, port: number): Promise<AuditMetrics> {
 async function workerMode(): Promise<void> {
   const say = (msg: unknown) => process.stdout.write(JSON.stringify(msg) + "\n");
 
+  // The parent passes the chosen profile via CLI (validated there already).
+  const profileArgIndex = process.argv.indexOf("--throttling-profile");
+  const profileName =
+    profileArgIndex >= 0 ? process.argv[profileArgIndex + 1] : DEFAULT_THROTTLING_PROFILE;
+  const profile = THROTTLING_PROFILES[profileName] ?? THROTTLING_PROFILES[DEFAULT_THROTTLING_PROFILE];
+
   let chrome: LaunchedChrome;
   try {
     chrome = await launchChrome({ chromeFlags: ["--headless=new", "--no-first-run"] });
@@ -301,7 +362,7 @@ async function workerMode(): Promise<void> {
     if (msg.type === "audit") {
       const target = msg.target as WireTarget;
       try {
-        const metrics = await runAudit(target.url, chrome.port);
+        const metrics = await runAudit(target.url, chrome.port, profile);
         say({ type: "result", target, metrics });
       } catch (err) {
         say({ type: "error", target, message: (err as Error).message });
@@ -356,7 +417,7 @@ async function runParallel(ctx: ParallelRunContext): Promise<{ attempted: number
   const spawnWorker = (index: number): ParallelWorker => {
     const proc = spawn(
       process.execPath,
-      ["--import", "tsx", scriptPath, "--worker"],
+      ["--import", "tsx", scriptPath, "--worker", "--throttling-profile", ctx.args.throttlingProfile],
       { stdio: ["pipe", "pipe", "inherit"], cwd: process.cwd() }
     );
     return { index, proc, inFlight: null, dead: false };
@@ -456,6 +517,7 @@ async function runParallel(ctx: ParallelRunContext): Promise<{ attempted: number
             metrics.total_byte_weight,
             metrics.performance_score,
             metrics.lighthouse_version,
+            ctx.args.throttlingProfile,
             ctx.fetchedAt
           );
           succeeded++;
@@ -570,7 +632,7 @@ async function main(): Promise<void> {
   const fetchedAt = Math.floor(Date.now() / 1000);
 
   console.log(
-    `Synthetic run ${runId} — ${targets.length} URL(s), suite=${args.suiteVersion}, config=${configHash}, concurrency=${args.concurrency}`
+    `Synthetic run ${runId} — ${targets.length} URL(s), suite=${args.suiteVersion}, config=${configHash}, concurrency=${args.concurrency}, throttling=${args.throttlingProfile}`
   );
 
   const insert = db.prepare(
@@ -578,8 +640,8 @@ async function main(): Promise<void> {
        id, run_id, suite_version, label, config_hash, origin, group_name,
        page_type, url, form_factor,
        lcp_ms, fcp_ms, cls, tbt_ms, speed_index_ms, ttfb_ms,
-       total_byte_weight, performance_score, lighthouse_version, fetched_at, excluded
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`
+       total_byte_weight, performance_score, lighthouse_version, throttling_profile, fetched_at, excluded
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`
   );
 
   let attempted = 0;
@@ -619,7 +681,7 @@ async function main(): Promise<void> {
         attempted++;
         console.log(`[${i + 1}/${targets.length}] ${site.origin} ${page.type} — ${page.url}`);
         try {
-          const metrics = await runAudit(page.url!, chrome.port);
+          const metrics = await runAudit(page.url!, chrome.port, THROTTLING_PROFILES[args.throttlingProfile]);
           insert.run(
             newRowId(),
             runId,
@@ -640,6 +702,7 @@ async function main(): Promise<void> {
             metrics.total_byte_weight,
             metrics.performance_score,
             metrics.lighthouse_version,
+            args.throttlingProfile,
             fetchedAt
           );
           succeeded++;

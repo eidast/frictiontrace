@@ -1,5 +1,8 @@
-## ADDED Requirements
+# synthetic-lighthouse-runs Specification
 
+## Purpose
+TBD - created by archiving change synthetic-lighthouse-runs. Update Purpose after archive.
+## Requirements
 ### Requirement: The system stores synthetic Lighthouse runs in the CrUX database
 The system SHALL provide a `synthetic_runs` table in `data/crux.db` recording, per run: run metadata (`run_id`, `suite_version`, `label`, `config_hash`, `fetched_at`, `lighthouse_version`), page identity (`origin`, `group_name`, `page_type`, `url`, `form_factor`), lab metrics (LCP, FCP, CLS, TBT, Speed Index, TTFB, total byte weight, performance score), and an `excluded` flag defaulting to 0.
 
@@ -62,4 +65,23 @@ The script SHALL accept a `--concurrency <n>` flag (integer, default 1, clamped 
 #### Scenario: Invalid concurrency fails fast
 - **WHEN** the user runs with `--concurrency 0` or a non-numeric value
 - **THEN** the runner exits with a clear error before launching Chrome or performing any audit
+
+### Requirement: The runner supports configurable throttling profiles
+The script SHALL accept a `--throttling-profile <name>` flag selecting the simulated throttling settings passed to Lighthouse (`throttlingMethod: 'simulate'`). Two profiles SHALL exist: `fast4g` (RTT 60 ms, 9216 Kbps down / 1536 Kbps up, 2x CPU slowdown — the default) and `slow4g` (RTT 150 ms, 1638 Kbps down / 750 Kbps up, 4x CPU slowdown — Lighthouse's previous default, kept as a stress test). Each persisted row SHALL record the profile used in a `throttling_profile` column; rows written before this column existed MUST read `slow4g` via an additive migration.
+
+#### Scenario: Default profile is fast4g
+- **WHEN** the user runs without `--throttling-profile`
+- **THEN** audits use the fast4g throttling settings and rows are persisted with `throttling_profile = 'fast4g'`
+
+#### Scenario: slow4g preserves previous behavior
+- **WHEN** the user runs with `--throttling-profile slow4g`
+- **THEN** audits use the slow4g throttling settings (equivalent to the previous Lighthouse default) and rows record `slow4g`
+
+#### Scenario: Unknown profile fails fast
+- **WHEN** the user runs with an unknown profile name
+- **THEN** the runner exits with a clear error listing the valid profiles before launching Chrome or performing any audit
+
+#### Scenario: Existing databases are migrated additively
+- **WHEN** a `data/crux.db` created before the `throttling_profile` column existed is opened
+- **THEN** the column is added via `ALTER TABLE ... ADD COLUMN` and pre-existing rows read `throttling_profile = 'slow4g'`
 

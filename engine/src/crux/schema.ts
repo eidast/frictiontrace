@@ -90,6 +90,7 @@ export const CRUX_SCHEMA_DDL = [
     total_byte_weight REAL,
     performance_score REAL,
     lighthouse_version TEXT,
+    throttling_profile TEXT NOT NULL DEFAULT 'slow4g',
     fetched_at INTEGER NOT NULL,
     excluded INTEGER NOT NULL DEFAULT 0
   )`,
