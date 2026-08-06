@@ -76,6 +76,23 @@ interface AuditMetrics {
   lighthouse_version: string | null;
 }
 
+interface ImageFinding {
+  audit_id: string;
+  resource_url: string;
+  total_bytes: number | null;
+  wasted_bytes: number | null;
+  wasted_pct: number | null;
+}
+
+// Lighthouse image audits whose detail items are persisted to image_findings.
+const IMAGE_AUDIT_IDS = [
+  "modern-image-formats",
+  "uses-optimized-images",
+  "uses-responsive-images",
+  "offscreen-images",
+  "unsized-images",
+] as const;
+
 /** Wire format sent from parent to worker: one target per audit message. */
 interface WireTarget {
   origin: string;
@@ -205,6 +222,10 @@ function newRowId(): string {
   return `srun_${randomBytes(12).toString("hex")}`;
 }
 
+function newFindingId(): string {
+  return `ifind_${randomBytes(12).toString("hex")}`;
+}
+
 function loadConfig(): { config: ReturnType<typeof CruxPagesConfig.parse>; configHash: string } {
   const raw = readFileSync(CONFIG_PATH, "utf-8");
   const configHash = createHash("sha256").update(raw).digest("hex").slice(0, 12);
@@ -279,7 +300,36 @@ function metricValue(result: any, auditId: string): number | null {
   return typeof value === "number" ? value : null;
 }
 
-async function runAudit(url: string, port: number, profile: ThrottlingProfile): Promise<AuditMetrics> {
+function extractImageFindings(result: any): ImageFinding[] {
+  const findings: ImageFinding[] = [];
+  for (const auditId of IMAGE_AUDIT_IDS) {
+    const items = result?.lhr?.audits?.[auditId]?.details?.items;
+    if (!Array.isArray(items)) continue;
+    for (const item of items) {
+      if (typeof item?.url !== "string" || !item.url) continue;
+      const totalBytes = typeof item.totalBytes === "number" ? item.totalBytes : null;
+      const wastedBytes = typeof item.wastedBytes === "number" ? item.wastedBytes : null;
+      const wastedPct =
+        totalBytes !== null && totalBytes > 0 && wastedBytes !== null
+          ? (wastedBytes / totalBytes) * 100
+          : null;
+      findings.push({
+        audit_id: auditId,
+        resource_url: item.url,
+        total_bytes: totalBytes,
+        wasted_bytes: wastedBytes,
+        wasted_pct: wastedPct,
+      });
+    }
+  }
+  return findings;
+}
+
+async function runAudit(
+  url: string,
+  port: number,
+  profile: ThrottlingProfile
+): Promise<{ metrics: AuditMetrics; findings: ImageFinding[] }> {
   const result = await lighthouse(url, {
     port,
     output: "json",
@@ -308,18 +358,21 @@ async function runAudit(url: string, port: number, profile: ThrottlingProfile): 
   }
 
   return {
-    lcp_ms: metricValue(result, "largest-contentful-paint"),
-    fcp_ms: metricValue(result, "first-contentful-paint"),
-    cls: metricValue(result, "cumulative-layout-shift"),
-    tbt_ms: metricValue(result, "total-blocking-time"),
-    speed_index_ms: metricValue(result, "speed-index"),
-    ttfb_ms: metricValue(result, "server-response-time"),
-    total_byte_weight: metricValue(result, "total-byte-weight"),
-    performance_score:
-      typeof lhr.categories?.performance?.score === "number"
-        ? lhr.categories.performance.score
-        : null,
-    lighthouse_version: lhr.lighthouseVersion ?? null,
+    metrics: {
+      lcp_ms: metricValue(result, "largest-contentful-paint"),
+      fcp_ms: metricValue(result, "first-contentful-paint"),
+      cls: metricValue(result, "cumulative-layout-shift"),
+      tbt_ms: metricValue(result, "total-blocking-time"),
+      speed_index_ms: metricValue(result, "speed-index"),
+      ttfb_ms: metricValue(result, "server-response-time"),
+      total_byte_weight: metricValue(result, "total-byte-weight"),
+      performance_score:
+        typeof lhr.categories?.performance?.score === "number"
+          ? lhr.categories.performance.score
+          : null,
+      lighthouse_version: lhr.lighthouseVersion ?? null,
+    },
+    findings: extractImageFindings(result),
   };
 }
 
@@ -362,8 +415,8 @@ async function workerMode(): Promise<void> {
     if (msg.type === "audit") {
       const target = msg.target as WireTarget;
       try {
-        const metrics = await runAudit(target.url, chrome.port, profile);
-        say({ type: "result", target, metrics });
+        const { metrics, findings } = await runAudit(target.url, chrome.port, profile);
+        say({ type: "result", target, metrics, findings });
       } catch (err) {
         say({ type: "error", target, message: (err as Error).message });
       }
@@ -394,6 +447,32 @@ interface ParallelRunContext {
   args: CliArgs;
   configHash: string;
   insert: { run: (...values: unknown[]) => unknown };
+  insertFinding: { run: (...values: unknown[]) => unknown };
+}
+
+// Persists image-audit findings for one audited URL. Rows share the run_id.
+function saveFindings(
+  insertFinding: { run: (...values: unknown[]) => unknown },
+  runId: string,
+  fetchedAt: number,
+  target: WireTarget,
+  findings: ImageFinding[]
+): void {
+  for (const f of findings) {
+    insertFinding.run(
+      newFindingId(),
+      runId,
+      target.origin,
+      target.pageType,
+      target.url,
+      f.audit_id,
+      f.resource_url,
+      f.total_bytes,
+      f.wasted_bytes,
+      f.wasted_pct,
+      fetchedAt
+    );
+  }
 }
 
 /**
@@ -497,6 +576,7 @@ async function runParallel(ctx: ParallelRunContext): Promise<{ attempted: number
         if (msg.type === "result") {
           const target = msg.target as WireTarget;
           const metrics = msg.metrics as AuditMetrics;
+          const findings = (msg.findings ?? []) as ImageFinding[];
           ctx.insert.run(
             newRowId(),
             ctx.runId,
@@ -520,9 +600,12 @@ async function runParallel(ctx: ParallelRunContext): Promise<{ attempted: number
             ctx.args.throttlingProfile,
             ctx.fetchedAt
           );
+          saveFindings(ctx.insertFinding, ctx.runId, ctx.fetchedAt, target, findings);
           succeeded++;
           finished++;
-          console.log(`  ok — LCP=${metrics.lcp_ms} ms, score=${metrics.performance_score}`);
+          console.log(
+            `  ok — LCP=${metrics.lcp_ms} ms, score=${metrics.performance_score}, ${findings.length} hallazgos de imagen`
+          );
         } else if (msg.type === "error") {
           const target = msg.target as WireTarget;
           failed++;
@@ -644,6 +727,13 @@ async function main(): Promise<void> {
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`
   );
 
+  const insertFinding = db.prepare(
+    `INSERT INTO image_findings (
+       id, run_id, origin, page_type, url_audited, audit_id,
+       resource_url, total_bytes, wasted_bytes, wasted_pct, fetched_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+
   let attempted = 0;
   let succeeded = 0;
   let failed = 0;
@@ -651,7 +741,7 @@ async function main(): Promise<void> {
   if (args.concurrency > 1 && targets.length > 1) {
     // Parallel: workers are separate processes, each with its own Chrome.
     try {
-      const result = await runParallel({ targets, runId, fetchedAt, args, configHash, insert });
+      const result = await runParallel({ targets, runId, fetchedAt, args, configHash, insert, insertFinding });
       attempted = result.attempted;
       succeeded = result.succeeded;
       failed = result.failed;
@@ -681,7 +771,7 @@ async function main(): Promise<void> {
         attempted++;
         console.log(`[${i + 1}/${targets.length}] ${site.origin} ${page.type} — ${page.url}`);
         try {
-          const metrics = await runAudit(page.url!, chrome.port, THROTTLING_PROFILES[args.throttlingProfile]);
+          const { metrics, findings } = await runAudit(page.url!, chrome.port, THROTTLING_PROFILES[args.throttlingProfile]);
           insert.run(
             newRowId(),
             runId,
@@ -705,8 +795,17 @@ async function main(): Promise<void> {
             args.throttlingProfile,
             fetchedAt
           );
+          saveFindings(
+            insertFinding,
+            runId,
+            fetchedAt,
+            { origin: site.origin, group: site.group, pageType: page.type, url: page.url! },
+            findings
+          );
           succeeded++;
-          console.log(`  ok — LCP=${metrics.lcp_ms} ms, score=${metrics.performance_score}`);
+          console.log(
+            `  ok — LCP=${metrics.lcp_ms} ms, score=${metrics.performance_score}, ${findings.length} hallazgos de imagen`
+          );
         } catch (err) {
           failed++;
           console.warn(`  warning: audit failed for ${page.url}: ${(err as Error).message}`);

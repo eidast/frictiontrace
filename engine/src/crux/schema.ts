@@ -100,4 +100,24 @@ export const CRUX_SCHEMA_DDL = [
 
   `CREATE INDEX IF NOT EXISTS idx_synthetic_runs_origin_page
     ON synthetic_runs(origin, page_type)`,
+
+  `CREATE TABLE IF NOT EXISTS image_findings (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    page_type TEXT NOT NULL,
+    url_audited TEXT NOT NULL,
+    audit_id TEXT NOT NULL,
+    resource_url TEXT NOT NULL,
+    total_bytes REAL,
+    wasted_bytes REAL,
+    wasted_pct REAL,
+    fetched_at INTEGER NOT NULL
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_image_findings_run_id
+    ON image_findings(run_id)`,
+
+  `CREATE INDEX IF NOT EXISTS idx_image_findings_origin_page
+    ON image_findings(origin, page_type)`,
 ];

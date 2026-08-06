@@ -23,7 +23,8 @@
     "crux:dashboard:build": "npx tsx scripts/crux-dashboard.ts --build",
     "crux:sync": "set -a; . ./.env; set +a; npx tsx scripts/crux-sync.ts",
     "crux:group-report": "npx tsx scripts/crux-group-report.ts",
-    "synthetic:run": "npx tsx scripts/synthetic-run.ts"
+    "synthetic:run": "npx tsx scripts/synthetic-run.ts",
+    "image:report": "npx tsx scripts/image-report.ts"
   },
   "license": "MIT",
   "dependencies": {
