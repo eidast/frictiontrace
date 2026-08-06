@@ -6,6 +6,7 @@ export type PageType = z.infer<typeof PageType>;
 export const GroupName = z.enum([
   "walmart_propios",
   "walmart_subsidiarias",
+  "walmart_global",
   "otros",
 ]);
 export type GroupName = z.infer<typeof GroupName>;

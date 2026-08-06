@@ -48,12 +48,22 @@ const METRICS: MetricDef[] = [
   },
 ];
 
-type Cohort = "walmart" | "competencia";
+type Cohort = "walmart" | "walmart_global" | "competencia";
 
-const COHORTS: Record<Cohort, { label: string; groups: string[] }> = {
-  walmart: { label: "Walmart", groups: ["walmart_propios", "walmart_subsidiarias"] },
-  competencia: { label: "Competencia", groups: ["otros"] },
-};
+interface CohortDef {
+  key: Cohort;
+  label: string;
+  groups: string[];
+}
+
+// Ordered list of cohorts; every report section renders N cohorts generically.
+// Key "walmart" kept for the CAM segment to minimize churn; display label
+// distinguishes it from the new global segment.
+const COHORTS: CohortDef[] = [
+  { key: "walmart", label: "Walmart CAM", groups: ["walmart_propios", "walmart_subsidiarias"] },
+  { key: "walmart_global", label: "Walmart Global", groups: ["walmart_global"] },
+  { key: "competencia", label: "Competencia", groups: ["otros"] },
+];
 
 interface SnapshotRow {
   origin: string;
@@ -79,8 +89,8 @@ function median(sortedValues: number[]): number {
 }
 
 function cohortOf(groupName: string): Cohort | null {
-  for (const [cohort, def] of Object.entries(COHORTS) as [Cohort, (typeof COHORTS)[Cohort]][]) {
-    if (def.groups.includes(groupName)) return cohort;
+  for (const def of COHORTS) {
+    if (def.groups.includes(groupName)) return def.key;
   }
   return null;
 }
@@ -272,31 +282,38 @@ function main(): void {
     .prepare("SELECT origin, label, group_name, country FROM crux_origins ORDER BY group_name, label")
     .all() as Array<{ origin: string; label: string; group_name: string; country: string }>;
 
-  // Latest non-excluded synthetic run (lab data); undefined when none exists.
-  // throttling_profile is constant per run, so MAX() picks it up from any row.
-  const latestRun = db
+  // Lab data: merge all non-excluded synthetic runs, keeping the newest row
+  // per origin + page_type (rows ordered by fetched_at DESC, first wins).
+  // Synthetic coverage can span multiple runs (e.g. a full baseline plus
+  // per-site runs for newly added sites).
+  const rawLabRows = db
     .prepare(
-      `SELECT run_id, MAX(fetched_at) AS fetched_at, MAX(throttling_profile) AS throttling_profile
+      `SELECT origin, group_name, page_type, performance_score, tbt_ms,
+              speed_index_ms, total_byte_weight, lcp_ms,
+              run_id, fetched_at, throttling_profile
        FROM synthetic_runs
        WHERE excluded = 0
-       GROUP BY run_id
-       ORDER BY fetched_at DESC
-       LIMIT 1`,
+       ORDER BY fetched_at DESC`,
     )
-    .get() as { run_id: string; fetched_at: number; throttling_profile: string | null } | undefined;
-
-  const labRows = latestRun
-    ? (db
-        .prepare(
-          `SELECT origin, group_name, page_type, performance_score, tbt_ms,
-                  speed_index_ms, total_byte_weight, lcp_ms
-           FROM synthetic_runs
-           WHERE run_id = ?`,
-        )
-        .all(latestRun.run_id) as LabRow[])
-    : [];
+    .all() as Array<LabRow & { run_id: string; fetched_at: number; throttling_profile: string | null }>;
 
   db.close();
+
+  const seenLabKeys = new Set<string>();
+  const labRows: LabRow[] = [];
+  const labRunIds = new Set<string>();
+  let labLatestFetchedAt = 0;
+  const labProfiles = new Set<string>();
+  for (const r of rawLabRows) {
+    const key = `${r.origin}|${r.page_type}`;
+    if (seenLabKeys.has(key)) continue;
+    seenLabKeys.add(key);
+    labRows.push(r);
+    labRunIds.add(r.run_id);
+    if (r.fetched_at > labLatestFetchedAt) labLatestFetchedAt = r.fetched_at;
+    if (r.throttling_profile) labProfiles.add(r.throttling_profile);
+  }
+  const hasLabData = labRows.length > 0;
 
   // Deduplicate: one value per origin × page_type × metric (url-level wins by ORDER BY)
   const seen = new Set<string>();
@@ -309,11 +326,12 @@ function main(): void {
   }
 
   // stats[cohort][pageType][metric] = Stat
-  const stats: Record<Cohort, Record<string, Record<string, Stat>>> = {
-    walmart: {},
-    competencia: {},
-  };
-  const siteCounts: Record<Cohort, Set<string>> = { walmart: new Set(), competencia: new Set() };
+  const stats = Object.fromEntries(
+    COHORTS.map((c) => [c.key, {}])
+  ) as Record<Cohort, Record<string, Record<string, Stat>>>;
+  const siteCounts = Object.fromEntries(
+    COHORTS.map((c) => [c.key, new Set<string>()])
+  ) as Record<Cohort, Set<string>>;
 
   for (const r of deduped) {
     const cohort = cohortOf(r.group_name);
@@ -353,12 +371,13 @@ function main(): void {
   const labelByOrigin = new Map(sites.map((s) => [s.origin, s.label]));
 
   // labStats[cohort][pageType][metricKey] = Stat
-  const labStats: Record<Cohort, Record<string, Record<string, Stat>>> = {
-    walmart: {},
-    competencia: {},
-  };
+  const labStats = Object.fromEntries(
+    COHORTS.map((c) => [c.key, {}])
+  ) as Record<Cohort, Record<string, Record<string, Stat>>>;
   const labSiteValues = new Map<string, number>();
-  const labSiteCounts: Record<Cohort, Set<string>> = { walmart: new Set(), competencia: new Set() };
+  const labSiteCounts = Object.fromEntries(
+    COHORTS.map((c) => [c.key, new Set<string>()])
+  ) as Record<Cohort, Set<string>>;
 
   for (const r of labRows) {
     const cohort = cohortOf(r.group_name);
@@ -395,8 +414,8 @@ function main(): void {
       (def) => `<th><span class="metric-tip" data-tip="${escapeHtml(def.description)}">${def.label}</span></th>`,
     ).join("");
 
-    const cohortRows = (Object.keys(COHORTS) as Cohort[]).map((cohort) => {
-      const list = sites.filter((s) => cohortOf(s.group_name) === cohort);
+    const cohortRows = COHORTS.map((c) => {
+      const list = sites.filter((s) => cohortOf(s.group_name) === c.key);
       const rowsHtml = list.map((site, i) => {
         const cells = METRICS.map((def) => {
           const v = siteValues.get(`${site.origin}|${pt}|${def.name}`);
@@ -404,7 +423,7 @@ function main(): void {
           return `<td class="heat" data-v="${v}" style="${heatStyle(def, v)}"><span class="val">${formatValue(def, v)}</span></td>`;
         }).join("");
         const groupHeader = i === 0
-          ? `<th class="cohort-row ${cohort}" rowspan="${list.length}">${COHORTS[cohort].label}</th>`
+          ? `<th class="cohort-row ${c.key}" rowspan="${list.length}">${c.label}</th>`
           : "";
         return `<tr>${groupHeader}<th class="site-name">${escapeHtml(site.label)}</th>${cells}</tr>`;
       }).join("\n");
@@ -443,14 +462,20 @@ ${cohortRows}
 
   const sections = PAGE_TYPES.map((pt) => {
     const rowsHtml = METRICS.map((def) => {
-      const w = stats.walmart[pt]?.[def.name];
-      const c = stats.competencia[pt]?.[def.name];
+      const cohortCells = COHORTS.map((c) => {
+        const s = stats[c.key][pt]?.[def.name];
+        return `${cell(def, s, "min")}${cell(def, s, "median")}${cell(def, s, "max")}${pctGoodCell(def, s)}`;
+      }).join("\n        ");
       return `<tr>
         <th><span class="metric-tip" data-tip="${escapeHtml(def.description)}">${def.label}</span></th>
-        ${cell(def, w, "min")}${cell(def, w, "median")}${cell(def, w, "max")}${pctGoodCell(def, w)}
-        ${cell(def, c, "min")}${cell(def, c, "median")}${cell(def, c, "max")}${pctGoodCell(def, c)}
+        ${cohortCells}
       </tr>`;
     }).join("\n");
+
+    const cohortHeaders = COHORTS.map(
+      (c) => `<th colspan="4" class="cohort ${c.key}">${c.label} (${siteCounts[c.key].size} sitios)</th>`
+    ).join("\n            ");
+    const subHeaders = COHORTS.map(() => `<th>Min</th><th>Mediana</th><th>Max</th><th>% bueno</th>`).join("\n            ");
 
     return `<section>
       <h2>Campo (CrUX) — ${PAGE_TYPE_LABELS[pt]}</h2>
@@ -458,12 +483,10 @@ ${cohortRows}
         <thead>
           <tr>
             <th rowspan="2">Métrica</th>
-            <th colspan="4" class="cohort walmart">Walmart (${siteCounts.walmart.size} sitios)</th>
-            <th colspan="4" class="cohort competencia">Competencia (${siteCounts.competencia.size} sitios)</th>
+            ${cohortHeaders}
           </tr>
           <tr>
-            <th>Min</th><th>Mediana</th><th>Max</th><th>% bueno</th>
-            <th>Min</th><th>Mediana</th><th>Max</th><th>% bueno</th>
+            ${subHeaders}
           </tr>
         </thead>
         <tbody>
@@ -484,27 +507,32 @@ ${rowsHtml}
     return `<td class="heat" data-v="${value}" style="${labStyle(def, value)}"><span class="val">${def.format(value)}</span>${extra}</td>`;
   }
 
-  const labSections = !latestRun
+  const labProfileText = [...labProfiles]
+    .map((p) => THROTTLING_PROFILE_LABELS[p] ?? p)
+    .join(" + ");
+  const labRunText =
+    labRunIds.size === 1
+      ? `Run <code>${escapeHtml([...labRunIds][0])}</code> · ${new Date(labLatestFetchedAt * 1000).toISOString().slice(0, 10)}`
+      : `Corridas: ${labRunIds.size} (más reciente: ${new Date(labLatestFetchedAt * 1000).toISOString().slice(0, 10)})`;
+
+  const labSections = !hasLabData
     ? `<section>
       <h2>Lab (Lighthouse)</h2>
       <p class="run-meta">No hay ninguna corrida sintética disponible (no existe o todas están excluidas). Ejecuta <code>npm run synthetic:run</code> para generar datos de laboratorio.</p>
     </section>`
     : `<section>
       <h2>Datos de laboratorio (Lighthouse)</h2>
-      <p class="run-meta">Run <code>${escapeHtml(latestRun.run_id)}</code> · ${new Date(latestRun.fetched_at * 1000).toISOString().slice(0, 10)} · ${labRows.length} URLs auditadas · Form factor: mobile · Throttling simulado · Perfil de red: ${escapeHtml(
-        THROTTLING_PROFILE_LABELS[latestRun.throttling_profile ?? ""] ??
-          latestRun.throttling_profile ??
-          "desconocido"
-      )}. Las métricas de laboratorio se miden en condiciones controladas y no son comparables 1:1 con los datos de campo (CrUX).</p>
+      <p class="run-meta">${labRunText} · ${labRows.length} URLs auditadas · Form factor: mobile · Throttling simulado · Perfil de red: ${escapeHtml(labProfileText || "desconocido")}. Las métricas de laboratorio se miden en condiciones controladas y no son comparables 1:1 con los datos de campo (CrUX).</p>
     </section>\n` +
     PAGE_TYPES.map((pt) => {
       const summaryRows = LAB_METRICS.map((def) => {
-        const w = labStats.walmart[pt]?.[def.key];
-        const c = labStats.competencia[pt]?.[def.key];
+        const cohortCells = COHORTS.map((c) => {
+          const s = labStats[c.key][pt]?.[def.key];
+          return `${labCell(def, s, "min")}${labCell(def, s, "median")}${labCell(def, s, "max")}`;
+        }).join("\n          ");
         return `<tr>
           <th><span class="metric-tip" data-tip="${escapeHtml(def.description)}">${def.label}</span></th>
-          ${labCell(def, w, "min")}${labCell(def, w, "median")}${labCell(def, w, "max")}
-          ${labCell(def, c, "min")}${labCell(def, c, "median")}${labCell(def, c, "max")}
+          ${cohortCells}
         </tr>`;
       }).join("\n");
 
@@ -512,8 +540,8 @@ ${rowsHtml}
         (def) => `<th><span class="metric-tip" data-tip="${escapeHtml(def.description)}">${def.label}</span></th>`,
       ).join("");
 
-      const cohortRows = (Object.keys(COHORTS) as Cohort[]).map((cohort) => {
-        const list = sites.filter((s) => cohortOf(s.group_name) === cohort);
+      const cohortRows = COHORTS.map((c) => {
+        const list = sites.filter((s) => cohortOf(s.group_name) === c.key);
         return list.map((site, i) => {
           const cells = LAB_METRICS.map((def) => {
             const v = labSiteValues.get(`${site.origin}|${pt}|${def.key}`);
@@ -521,11 +549,16 @@ ${rowsHtml}
             return `<td class="heat" data-v="${v}" style="${labStyle(def, v)}"><span class="val">${def.format(v)}</span></td>`;
           }).join("");
           const groupHeader = i === 0
-            ? `<th class="cohort-row ${cohort}" rowspan="${list.length}">${COHORTS[cohort].label}</th>`
+            ? `<th class="cohort-row ${c.key}" rowspan="${list.length}">${c.label}</th>`
             : "";
           return `<tr>${groupHeader}<th class="site-name">${escapeHtml(site.label)}</th>${cells}</tr>`;
         }).join("\n");
       }).join("\n");
+
+      const cohortHeaders = COHORTS.map(
+        (c) => `<th colspan="3" class="cohort ${c.key}">${c.label} (${labSiteCounts[c.key].size} sitios)</th>`
+      ).join("\n              ");
+      const subHeaders = COHORTS.map(() => `<th>Min</th><th>Mediana</th><th>Max</th>`).join("\n              ");
 
       return `<section>
         <h2>Lab (Lighthouse) — ${PAGE_TYPE_LABELS[pt]}</h2>
@@ -534,12 +567,10 @@ ${rowsHtml}
           <thead>
             <tr>
               <th rowspan="2">Métrica</th>
-              <th colspan="3" class="cohort walmart">Walmart (${labSiteCounts.walmart.size} sitios)</th>
-              <th colspan="3" class="cohort competencia">Competencia (${labSiteCounts.competencia.size} sitios)</th>
+              ${cohortHeaders}
             </tr>
             <tr>
-              <th>Min</th><th>Mediana</th><th>Max</th>
-              <th>Min</th><th>Mediana</th><th>Max</th>
+              ${subHeaders}
             </tr>
           </thead>
           <tbody>
@@ -563,15 +594,15 @@ ${cohortRows}
       `<tr><th><span class="metric-tip" data-tip="${escapeHtml(def.description)}">${def.label}</span></th><td class="good">≤ ${formatThreshold(def, def.good)}</td><td class="ni">${formatThreshold(def, def.good)} – ${formatThreshold(def, def.poor)}</td><td class="poor">> ${formatThreshold(def, def.poor)}</td></tr>`,
   ).join("\n");
 
-  const cohortSitesHtml = (Object.keys(COHORTS) as Cohort[]).map((cohort) => {
-    const list = sites.filter((s) => cohortOf(s.group_name) === cohort);
+  const cohortSitesHtml = COHORTS.map((c) => {
+    const list = sites.filter((s) => cohortOf(s.group_name) === c.key);
     const items = list.map((s) => {
-      const hasData = siteCounts[cohort].has(s.origin);
+      const hasData = siteCounts[c.key].has(s.origin);
       const badge = hasData ? "" : ` <span class="nodata" title="Sin datos CrUX en el período">sin datos</span>`;
       return `<li><strong>${escapeHtml(s.label)}</strong> <span class="origin">${escapeHtml(s.origin)}</span> <span class="country">${escapeHtml(s.country)}</span>${badge}</li>`;
     }).join("\n");
     return `<div class="site-col">
-      <h3 class="${cohort}">${COHORTS[cohort].label} (${siteCounts[cohort].size}/${list.length} con datos)</h3>
+      <h3 class="${c.key}">${c.label} (${siteCounts[c.key].size}/${list.length} con datos)</h3>
       <ul>
 ${items}
       </ul>
@@ -583,7 +614,7 @@ ${items}
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Walmart vs Competencia — CrUX comparativo (móvil)</title>
+<title>Walmart CAM vs Walmart Global vs Competencia — CrUX comparativo (móvil)</title>
 <style>
   :root {
     --good: #0cce6b; --good-bg: #e6f7ee;
@@ -604,6 +635,7 @@ ${items}
   thead th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
   thead .cohort { font-size: 13px; text-transform: none; letter-spacing: 0; }
   thead .cohort.walmart { color: #0071ce; }
+  thead .cohort.walmart_global { color: #6b3fa0; }
   thead .cohort.competencia { color: #c25400; }
   tbody th { text-align: left; font-weight: 600; }
   td .val { display: block; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -634,14 +666,16 @@ ${items}
   .heatmap th.site-name { text-align: left; font-weight: 400; white-space: nowrap; }
   .heatmap th.cohort-row { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 12px; letter-spacing: .05em; padding: 8px 4px; }
   .heatmap th.cohort-row.walmart { color: #0071ce; }
+  .heatmap th.cohort-row.walmart_global { color: #6b3fa0; }
   .heatmap th.cohort-row.competencia { color: #c25400; }
   table.sortable thead th.sortable-col { cursor: pointer; user-select: none; }
   table.sortable thead th.sortable-col::after { content: " ↕"; opacity: .35; font-size: 10px; }
   table.sortable thead th.sort-asc::after { content: " ▲"; opacity: .8; }
   table.sortable thead th.sort-desc::after { content: " ▼"; opacity: .8; }
-  .sites-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .sites-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
   .site-col h3 { margin: 0 0 8px; font-size: 14px; }
   .site-col h3.walmart { color: #0071ce; }
+  .site-col h3.walmart_global { color: #6b3fa0; }
   .site-col h3.competencia { color: #c25400; }
   .site-col ul { margin: 0; padding-left: 18px; font-size: 13px; }
   .site-col li { margin-bottom: 4px; }
@@ -654,7 +688,7 @@ ${items}
 </head>
 <body>
 <header>
-  <h1>Walmart vs Competencia — Métricas CrUX (móvil)</h1>
+  <h1>Walmart CAM vs Walmart Global vs Competencia — Métricas CrUX (móvil)</h1>
   <p>Período de recolección: ${periodStart} → ${periodEnd} (ventana de 28 días) · Form factor: PHONE · Percentil 75 por sitio · Generado: ${new Date().toISOString().slice(0, 10)}</p>
 </header>
 <main>
@@ -733,7 +767,7 @@ ${labSections}
   writeFileSync(OUT_PATH, html, "utf-8");
 
   console.log(`Reporte generado: ${OUT_PATH}`);
-  console.log(`Período: ${periodStart} → ${periodEnd} · PHONE · Walmart: ${siteCounts.walmart.size} sitios, Competencia: ${siteCounts.competencia.size} sitios`);
+  console.log(`Período: ${periodStart} → ${periodEnd} · PHONE · ${COHORTS.map((c) => `${c.label}: ${siteCounts[c.key].size} sitios`).join(" · ")}`);
 }
 
 main();

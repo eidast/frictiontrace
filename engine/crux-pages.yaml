@@ -247,3 +247,55 @@ sites:
         url: https://www.latorre.com.gt/abarrotes
       - type: pdp
         url: https://www.latorre.com.gt/atun-agua-lomo-trozos-light-sardimar-2-pack-112814/p
+  - origin: www.walmart.com
+    group: walmart_global
+    label: Walmart US
+    country: US
+    pages:
+      - type: homepage
+        url: https://www.walmart.com/
+      - type: checkout
+        url: https://www.walmart.com/cart
+      - type: plp
+        url: https://www.walmart.com/browse/food/976759
+      - type: pdp
+        url: https://www.walmart.com/ip/12166733
+  - origin: www.walmart.ca
+    group: walmart_global
+    label: Walmart Canada
+    country: CA
+    pages:
+      - type: homepage
+        url: https://www.walmart.ca/en
+      - type: checkout
+        url: https://www.walmart.ca/checkout
+      - type: plp
+        url: https://www.walmart.ca/en/grocery/N-117
+      - type: pdp
+        url: https://www.walmart.ca/en/ip/Coca-Cola-355mL-Cans-24-Pack/6000188745289
+  - origin: www.walmart.com.mx
+    group: walmart_global
+    label: Walmart México
+    country: MX
+    pages:
+      - type: homepage
+        url: https://www.walmart.com.mx/
+      - type: checkout
+        url: https://www.walmart.com.mx/checkout/
+      - type: plp
+        url: https://www.walmart.com.mx/abarrotes
+      - type: pdp
+        url: https://www.walmart.com.mx/ip/00750105530522
+  - origin: super.lider.cl
+    group: walmart_global
+    label: Walmart Chile (Lider)
+    country: CL
+    pages:
+      - type: homepage
+        url: https://super.lider.cl/
+      - type: checkout
+        url: https://super.lider.cl/checkout/
+      - type: plp
+        url: https://super.lider.cl/content/bebidas-y-snacks/bebidas/13901022_56657077
+      - type: pdp
+        url: https://super.lider.cl/ip/00780161033312
