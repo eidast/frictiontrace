@@ -37,3 +37,4 @@ This repo is managed with [OpenSpec](https://openspec.dev) (CLI v1.7+, schema: `
 - Test commands: `npm run test:unit` (vitest, engine workspace), `npm run test:integration` (Playwright).
 - Do not commit `runs/`, `data/*.db` runtime mutations, or generated reports unless the task explicitly requires it.
 - Git mutations (commit/push/reset) require explicit user confirmation each time.
+- User-facing documentation lives in `docs/` and is written in English; the README is the index — update it when adding or renaming documented features, and keep `docs/sites.md` in sync with `engine/crux-pages.yaml`.

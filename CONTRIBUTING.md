@@ -1,5 +1,9 @@
 # Contributing to FrictionTrace
 
+Thanks for your interest! This guide covers the common contribution paths. For setup and usage, start with [docs/getting-started.md](docs/getting-started.md); for the full command surface see [docs/cli-reference.md](docs/cli-reference.md).
+
+All behavior and feature changes go through the **OpenSpec workflow** described in [AGENTS.md](AGENTS.md) — create a change under `openspec/changes/`, validate it, implement, and archive when done. Please also read the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Adding an analyzer rule
 
 1. Create a new file under `engine/src/analyzer/rules/<ruleName>.ts`.
@@ -29,11 +33,11 @@ Every issue MUST cite at least one `signal_id` in its `evidence` array. The `iss
 
 ## Adding a new site to the CrUX benchmark
 
-1. Add the site to `docs/sites.md` under the appropriate group.
-2. Add a corresponding entry in `engine/crux-pages.yaml` with `url: null` for checkout, PLP, and PDP.
+1. Add the site to `docs/sites.md` under the appropriate group (`walmart_propios`, `walmart_subsidiarias`, `walmart_global`, or `otros`).
+2. Add a corresponding entry in `engine/crux-pages.yaml` with the same `group:` key and `url: null` for checkout, PLP, and PDP.
 3. Run `npx tsx scripts/crux-discover.ts` to discover the missing URLs.
-4. Run `npx tsx scripts/crux-sync.ts` to fetch CrUX history for the new site.
-5. Commit `engine/crux-pages.yaml` and `data/crux.db`.
+4. Run `npm run crux:sync` to fetch CrUX history for the new site.
+5. Commit `engine/crux-pages.yaml`, `docs/sites.md`, and `data/crux.db`.
 
 ## Running tests
 
