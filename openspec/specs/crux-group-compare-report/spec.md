@@ -4,7 +4,7 @@
 TBD - created by archiving change crux-group-compare-report. Update Purpose after archive.
 ## Requirements
 ### Requirement: The system generates a static cohort comparison report
-The system SHALL provide a script (`npm run crux:group-report`) that reads `data/crux.db` and writes a self-contained HTML file to `reports/crux-group-compare.html` comparing two site cohorts: Walmart (origins in groups `walmart_propios` and `walmart_subsidiarias`) and Competencia (origins in group `otros`). The report SHALL present CrUX field data sections and, when synthetic run data exists, Lighthouse lab data sections.
+The system SHALL provide a script (`npm run crux:group-report`) that reads `data/crux.db` and writes a self-contained HTML file to `reports/crux-group-compare.html` comparing site cohorts derived from the `group_name` values in the pages configuration: Walmart CAM (`walmart_propios` + `walmart_subsidiarias`), Walmart Global (`walmart_global`), and Competencia (`otros`). The set of cohorts SHALL be data-driven: adding a new `group_name` to the configuration and mapping it to a cohort MUST NOT require changes to the aggregation or rendering logic beyond the cohort list definition. The report SHALL present CrUX field data sections and, when synthetic run data exists, Lighthouse lab data sections.
 
 #### Scenario: Report generation produces a portable HTML file
 - **WHEN** the user runs `npm run crux:group-report` with a populated `data/crux.db`
@@ -17,6 +17,10 @@ The system SHALL provide a script (`npm run crux:group-report`) that reads `data
 #### Scenario: No synthetic run available
 - **WHEN** the `synthetic_runs` table has no rows with `excluded = 0`
 - **THEN** the report is still generated with all field sections, and the lab sections show a notice that no synthetic run is available
+
+#### Scenario: Third cohort renders everywhere
+- **WHEN** `walmart_global` origins exist in the database with field or lab data
+- **THEN** every summary table shows a "Walmart Global" column group, every heatmap includes the Walmart Global site block, and "Sitios evaluados" lists the 4 Walmart Global sites
 
 ### Requirement: The report aggregates p75 metrics per cohort and page type
 The report SHALL show, for each page type (`homepage`, `checkout`, `plp`, `pdp`), each metric (LCP, INP, CLS, FCP, TTFB), and each cohort, the minimum, median, and maximum of site-level `p75_value` from the latest collection period for the PHONE form factor, along with the label of the site reaching each extreme. The median is used instead of the arithmetic mean because cohorts are small (6-13 sites) and the mean is sensitive to outliers.
@@ -59,7 +63,7 @@ The report SHALL include a "Sitios evaluados" section listing every site in each
 
 #### Scenario: Sites are grouped by cohort
 - **WHEN** the report is rendered
-- **THEN** the Walmart column lists all 13 Walmart-ecosystem sites and the Competencia column lists all 6 competitor sites, each with its origin and country
+- **THEN** each cohort column lists its sites (13 Walmart CAM, 4 Walmart Global, 6 Competencia), each with its origin and country
 
 #### Scenario: Site without data is flagged
 - **WHEN** a site has no CrUX rows in the report's collection period
@@ -104,4 +108,15 @@ The report SHALL color lab cells with graduated scales: performance score uses L
 #### Scenario: Score coloring is higher-is-better
 - **WHEN** a lab score cell shows 0.95 and another shows 0.10
 - **THEN** the 0.95 cell renders green and the 0.10 cell renders deep red
+
+### Requirement: The configuration includes the four Walmart global market sites
+`engine/crux-pages.yaml` SHALL include a group `walmart_global` with exactly these sites, each with homepage, checkout, PLP, and PDP entries: Walmart US (`www.walmart.com`, country US), Walmart Canada (`www.walmart.ca`, country CA), Walmart Mexico (`www.walmart.com.mx`, country MX), Walmart Chile (`super.lider.cl`, country CL).
+
+#### Scenario: Config validates against the schema
+- **WHEN** `crux-pages.yaml` is loaded by the sync or report tooling
+- **THEN** the 4 new sites pass zod validation with group `walmart_global` and 4 pages each
+
+#### Scenario: Chile uses the Lider supermercado origin
+- **WHEN** the configuration is inspected
+- **THEN** the Chile site's origin is `super.lider.cl` (not `www.lider.cl`, whose /supermercado paths redirect there)
 

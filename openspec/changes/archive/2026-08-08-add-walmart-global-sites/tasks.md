@@ -1,6 +1,6 @@
 # Tasks
 
-- [ ] 1.1 Add to `engine/crux-pages.yaml` a new group `walmart_global` with 4 sites (Walmart US `www.walmart.com`, Walmart Canada `www.walmart.ca`, Walmart Mexico `www.walmart.com.mx`, Walmart Chile `super.lider.cl`), each with homepage/checkout/plp/pdp URLs verified during research (see design notes in proposal thread).
+- [x] 1.1 Add to `engine/crux-pages.yaml` a new group `walmart_global` with 4 sites (Walmart US `www.walmart.com`, Walmart Canada `www.walmart.ca`, Walmart Mexico `www.walmart.com.mx`, Walmart Chile `super.lider.cl`), each with homepage/checkout/plp/pdp URLs verified during research (see design notes in proposal thread).
 - [x] 1.2 Refactor `scripts/crux-group-report.ts` so cohorts are a data-driven ordered list (Walmart CAM = `walmart_propios` + `walmart_subsidiarias`; Walmart Global = `walmart_global`; Competencia = `otros`) instead of a hardcoded 2-cohort record.
 - [x] 1.3 Render the third cohort in all sections: field summary tables, field heatmaps, lab summary tables, lab heatmaps, and "Sitios evaluados".
 - [x] 1.4 Validate: `openspec validate add-walmart-global-sites --strict`, `npm run typecheck`, `npm run test:unit`.

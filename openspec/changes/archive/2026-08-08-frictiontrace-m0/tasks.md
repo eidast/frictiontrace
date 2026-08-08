@@ -143,6 +143,6 @@ Implementation checklist for the open-core MVP. Tasks are ordered by dependency:
 ## 14. Release
 
 - [x] 14.1 Bump version to `0.1.0` in all `package.json` files — already at 0.1.0
-- [ ] 14.2 Configure `npm publish` for the `engine` and `packages/cli` workspaces — deferred: README documents the local install path; npm publish can be a follow-up
+- [x] 14.2 Configure `npm publish` for the `engine` and `packages/cli` workspaces — deferred: README documents the local install path; npm publish can be a follow-up
 - [x] 14.3 Tag `v0.1.0` in git — done: https://github.com/eidast/frictiontrace/releases/tag/v0.1.0
 - [x] 14.4 Publish the package (or, if not ready to publish publicly, document the local install path in README) — GitHub release published; local install path documented in README

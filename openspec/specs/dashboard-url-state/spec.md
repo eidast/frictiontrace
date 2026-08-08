@@ -1,4 +1,9 @@
-## ADDED Requirements
+# dashboard-url-state Specification
+
+## Purpose
+Shareable dashboard state: the filter configuration is persisted in the URL query string so views can be bookmarked and shared.
+
+## Requirements
 
 ### Requirement: Filter state is persisted in the URL query string
 The dashboard SHALL synchronize all active filters and the active tab with the browser URL via query parameters. On page load, the dashboard SHALL read query parameters to restore filter state. Browser back/forward navigation SHALL restore the corresponding filter state.

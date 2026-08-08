@@ -1,4 +1,9 @@
-## ADDED Requirements
+# dashboard-active-filters Specification
+
+## Purpose
+Visibility of the currently active filters: chips in the top bar that summarize the filter state and allow removing individual filters.
+
+## Requirements
 
 ### Requirement: Active filter chips are displayed in the top bar
 The dashboard SHALL display chips (pills) in the top bar summarizing all currently active filters. Each chip SHALL include a label describing the filter value and a clickable "X" button to remove that filter.
