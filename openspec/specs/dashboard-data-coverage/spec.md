@@ -1,4 +1,9 @@
-## ADDED Requirements
+# dashboard-data-coverage Specification
+
+## Purpose
+Transparency about the underlying data: freshness indicators and coverage summaries so users know how current and complete the CrUX dataset is.
+
+## Requirements
 
 ### Requirement: Data freshness indicator is displayed
 The dashboard SHALL display the date of the most recent data in the top bar (e.g., "Datos al 29 Jun 2026"). This date SHALL be derived from `MAX(collection_end)` in the database (serve mode) or from embedded `dateRange` (build mode).

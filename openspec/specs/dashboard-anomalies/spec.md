@@ -1,4 +1,9 @@
-## ADDED Requirements
+# dashboard-anomalies Specification
+
+## Purpose
+Detection and visual highlighting of anomalous data points (sudden metric regressions or improvements) in dashboard charts and tables.
+
+## Requirements
 
 ### Requirement: Anomalies are visually highlighted in charts and tables
 The dashboard SHALL detect metric values that deviate more than 20% from the group average and highlight them with a visual indicator (orange/red border or icon). Anomaly detection SHALL run client-side on filtered data.

@@ -69,6 +69,6 @@ Implementation checklist for CrUX data integration. Tasks are ordered by depende
 - [x] 8.2 Asegurar que `data/crux.db` NO esté en `.gitignore` (se versiona)
 - [x] 8.3 Documentar en `README.md` la sección "CrUX Data" explicando cómo ejecutar descubrimiento, sync, y analytics
 - [x] 8.4 Agregar entry en `CONTRIBUTING.md` sobre cómo agregar un nuevo sitio al benchmark
-- [ ] 8.5 Ejecutar descubrimiento real contra los 28 sitios y committear `crux-pages.yaml` resultante
+- [x] 8.5 Ejecutar descubrimiento real contra los 28 sitios y committear `crux-pages.yaml` resultante
 - [x] 8.6 Ejecutar sync real contra la CrUX History API y committear `data/crux.db` con datos iniciales (hasta 40 semanas de historia)
 - [x] 8.7 Ejecutar analytics script sobre los datos reales y documentar hallazgos iniciales

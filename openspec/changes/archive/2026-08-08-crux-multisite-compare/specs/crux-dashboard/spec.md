@@ -98,6 +98,10 @@ The dashboard SHALL provide sidebar filters: group, site (multiselect), page typ
 - **WHEN** the user changes the metric filter from LCP to CLS
 - **THEN** the active view re-fetches data (serve) or re-filters (build) and redraws charts
 
+#### Scenario: query_level filter distinguishes URL from origin data
+- **WHEN** the user selects query_level="URL" and a checkout page type
+- **THEN** only records with query_level='url' are shown, and each data point displays a `[U]` label
+
 #### Scenario: Fractional metric activates Desglose view
 - **WHEN** the user selects a fractional metric (LCP resource type, navigation types, or form factors) from the metric filter while on a histogram-only tab (Resumen, Grupos, Sitios, Tendencia)
 - **THEN** the dashboard automatically switches to the Desglose tab

@@ -1,4 +1,9 @@
-## ADDED Requirements
+# dashboard-date-presets Specification
+
+## Purpose
+Quick date-range selection via presets (e.g. last 4/12/26 weeks) that configure the dashboard's date filters in one action.
+
+## Requirements
 
 ### Requirement: Date presets provide quick range selection
 The dashboard SHALL display preset buttons in the sidebar date section for common time ranges: "1m", "2m", "4m", "6m", and "Todo". Clicking a preset SHALL set `dateFrom` to N months ago and `dateTo` to today's date, update the date input fields, and trigger `applyFilters()`.
