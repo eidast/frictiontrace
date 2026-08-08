@@ -91,6 +91,10 @@ export const CRUX_SCHEMA_DDL = [
     performance_score REAL,
     lighthouse_version TEXT,
     throttling_profile TEXT NOT NULL DEFAULT 'slow4g',
+    image_bytes_modern REAL,
+    image_bytes_legacy REAL,
+    image_bytes_third_party REAL,
+    image_count INTEGER,
     fetched_at INTEGER NOT NULL,
     excluded INTEGER NOT NULL DEFAULT 0
   )`,
@@ -106,12 +110,15 @@ export const CRUX_SCHEMA_DDL = [
     run_id TEXT NOT NULL,
     origin TEXT NOT NULL,
     page_type TEXT NOT NULL,
+    form_factor TEXT NOT NULL DEFAULT 'mobile',
     url_audited TEXT NOT NULL,
     audit_id TEXT NOT NULL,
     resource_url TEXT NOT NULL,
     total_bytes REAL,
     wasted_bytes REAL,
     wasted_pct REAL,
+    displayed_width REAL,
+    displayed_height REAL,
     fetched_at INTEGER NOT NULL
   )`,
 

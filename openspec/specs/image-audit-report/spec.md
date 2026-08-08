@@ -1,11 +1,18 @@
-## ADDED Requirements
+# image-audit-report Specification
 
+## Purpose
+TBD - created by archiving change image-audit-report. Update Purpose after archive.
+## Requirements
 ### Requirement: The system persists Lighthouse image audit findings
-For each audited URL, the synthetic runner SHALL extract detail items from the Lighthouse audits `modern-image-formats`, `uses-optimized-images`, `uses-responsive-images`, `offscreen-images`, and `unsized-images`, and persist them in an `image_findings` table with run_id, origin, page_type, audited URL, audit id, resource URL, total bytes, wasted bytes, and wasted percentage. The table MUST be created additively without altering existing tables.
+For each audited URL, the synthetic runner SHALL extract detail items from the Lighthouse image audits available in the bundled Lighthouse version — `image-delivery-insight` (consolidates format, compression, and responsive-sizing savings) and `unsized-images` — and persist them in an `image_findings` table with run_id, origin, page_type, audited URL, audit id, resource URL, total bytes, wasted bytes, and wasted percentage. The table MUST be created additively without altering existing tables. Within a single audited URL, items sharing the same `(audit_id, resource_url)` MUST be deduplicated, keeping the maximum wasted bytes, because `image-delivery-insight` repeats one row per DOM node referencing the same resource.
 
 #### Scenario: Findings stored per resource
 - **WHEN** a homepage audit finds 3 JPEG images that could be WebP
-- **THEN** 3 rows with audit_id `modern-image-formats` are persisted with each image's URL and estimated wasted bytes
+- **THEN** 3 rows with audit_id `image-delivery-insight` are persisted with each image's URL and estimated wasted bytes
+
+#### Scenario: Same resource referenced by multiple nodes is counted once
+- **WHEN** `image-delivery-insight` lists the same image URL in two items because two DOM nodes render it
+- **THEN** a single `image_findings` row is persisted for that URL with the maximum wasted bytes, so savings are not double-counted
 
 #### Scenario: URL with no findings stores nothing
 - **WHEN** an audited URL has no image audit items
@@ -28,3 +35,4 @@ The report SHALL mark a site's homepage results as "parcial" when the audit prod
 #### Scenario: Blocked audit is flagged
 - **WHEN** a site's homepage Lighthouse run hit a PerimeterX /blocked page
 - **THEN** the report shows the site with a "parcial" badge and excludes its numbers from the global top-20
+

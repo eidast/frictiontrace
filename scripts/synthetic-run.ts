@@ -16,21 +16,28 @@ const CONFIG_PATH = resolve(process.cwd(), "engine", "crux-pages.yaml");
 const USAGE = `Usage: npx tsx scripts/synthetic-run.ts [options]
 
 Runs synthetic Lighthouse audits over the sites/pages in engine/crux-pages.yaml
-(mobile form factor, simulated throttling) and stores metrics in data/crux.db.
+and stores metrics in data/crux.db.
 
 Options:
   --site <origin>        Only audit pages of this origin (e.g. www.walmart.com.gt)
   --page <type>          Only audit this page type (homepage|checkout|plp|pdp)
+  --form-factor <ff>     mobile (default) | desktop | both
+                         Desktop audits default to the broadband throttling
+                         profile; mobile audits default to fast4g.
   --label <text>         Free-text label stored on every row of this run
   --suite-version <v>    Suite version tag (default: v1)
   --concurrency <n>      Parallel workers, each in its own process with its own
                          Chrome instance (integer, default 1 = sequential, max 4)
   --throttling-profile <name>
-                         Simulated throttling profile (default: fast4g):
-                           fast4g  RTT 60 ms, 9 Mbps down / 1.5 Mbps up, 2x CPU
-                                   (realistic median mobile, Central America 2026)
-                           slow4g  RTT 150 ms, 1.6 Mbps down / 0.75 Mbps up, 4x CPU
-                                   (Lighthouse default, kept as stress test)
+                         Override the simulated throttling profile for ALL
+                         targets (by default mobile uses fast4g, desktop uses
+                         broadband):
+                           fast4g     RTT 60 ms, 9 Mbps down / 1.5 Mbps up, 2x CPU
+                                      (realistic median mobile, Central America 2026)
+                           slow4g     RTT 150 ms, 1.6 Mbps down / 0.75 Mbps up, 4x CPU
+                                      (Lighthouse default, kept as stress test)
+                           broadband  RTT 40 ms, 20 Mbps down / 5 Mbps up, 1x CPU
+                                      (fixed-line desktop)
   --list                 List past runs and exit
   --exclude <run_id>     Mark all rows of a run as excluded and exit
   --include <run_id>     Clear the excluded flag for all rows of a run and exit
@@ -43,16 +50,27 @@ interface CliArgs {
   label: string;
   suiteVersion: string;
   concurrency: number;
-  throttlingProfile: string;
+  throttlingProfile?: string;
+  formFactor: FormFactorChoice;
   list: boolean;
   exclude?: string;
   include?: string;
   help: boolean;
 }
 
+type FormFactor = "mobile" | "desktop";
+type FormFactorChoice = FormFactor | "both";
+
 interface AuditTarget {
   site: CruxSiteConfigT;
   page: CruxPageEntryT;
+  formFactor: FormFactor;
+}
+
+/** Per-target throttling profile: explicit --throttling-profile wins;
+ *  otherwise desktop defaults to broadband, mobile to fast4g. */
+function profileForTarget(args: CliArgs, formFactor: FormFactor): string {
+  return args.throttlingProfile ?? (formFactor === "desktop" ? "broadband" : "fast4g");
 }
 
 interface RunSummaryRow {
@@ -82,14 +100,24 @@ interface ImageFinding {
   total_bytes: number | null;
   wasted_bytes: number | null;
   wasted_pct: number | null;
+  displayed_width: number | null;
+  displayed_height: number | null;
+}
+
+/** Per-page image byte stats, aggregated from the network-requests audit. */
+interface PageImageStats {
+  image_bytes_modern: number;
+  image_bytes_legacy: number;
+  image_bytes_third_party: number;
+  image_count: number;
 }
 
 // Lighthouse image audits whose detail items are persisted to image_findings.
+// Lighthouse 13 removed the legacy byte-savings audits (modern-image-formats,
+// uses-optimized-images, uses-responsive-images, offscreen-images); their
+// findings now live in image-delivery-insight. unsized-images still exists.
 const IMAGE_AUDIT_IDS = [
-  "modern-image-formats",
-  "uses-optimized-images",
-  "uses-responsive-images",
-  "offscreen-images",
+  "image-delivery-insight",
   "unsized-images",
 ] as const;
 
@@ -99,6 +127,8 @@ interface WireTarget {
   group: string;
   pageType: string;
   url: string;
+  formFactor: FormFactor;
+  throttlingProfile: string;
 }
 
 const MAX_CONCURRENCY = 4;
@@ -110,9 +140,9 @@ interface ThrottlingProfile {
   cpuSlowdownMultiplier: number;
 }
 
-// Simulated throttling profiles. fast4g is the default: a realistic median
-// mobile user in Central America 2026. slow4g is Lighthouse's built-in default,
-// kept as a stress test.
+// Simulated throttling profiles. fast4g is the default for mobile: a realistic
+// median mobile user in Central America 2026. slow4g is Lighthouse's built-in
+// default, kept as a stress test. broadband is the desktop default: fixed-line.
 const THROTTLING_PROFILES: Record<string, ThrottlingProfile> = {
   fast4g: {
     rttMs: 60,
@@ -125,6 +155,12 @@ const THROTTLING_PROFILES: Record<string, ThrottlingProfile> = {
     throughputKbps: 1638,
     uploadThroughputKbps: 750,
     cpuSlowdownMultiplier: 4,
+  },
+  broadband: {
+    rttMs: 40,
+    throughputKbps: 20480,
+    uploadThroughputKbps: 5120,
+    cpuSlowdownMultiplier: 1,
   },
 };
 
@@ -157,7 +193,7 @@ function parseArgs(argv: string[]): CliArgs {
     label: "",
     suiteVersion: "v1",
     concurrency: 1,
-    throttlingProfile: DEFAULT_THROTTLING_PROFILE,
+    formFactor: "mobile",
     list: false,
     help: false,
   };
@@ -170,6 +206,15 @@ function parseArgs(argv: string[]): CliArgs {
       case "--page":
         args.page = argv[++i];
         break;
+      case "--form-factor": {
+        const raw = argv[++i] ?? "";
+        if (raw !== "mobile" && raw !== "desktop" && raw !== "both") {
+          console.error(`Error: --form-factor must be mobile|desktop|both, got "${raw}".`);
+          process.exit(1);
+        }
+        args.formFactor = raw;
+        break;
+      }
       case "--label":
         args.label = argv[++i] ?? "";
         break;
@@ -243,6 +288,8 @@ function loadConfig(): { config: ReturnType<typeof CruxPagesConfig.parse>; confi
 
 function collectTargets(config: ReturnType<typeof CruxPagesConfig.parse>, args: CliArgs): AuditTarget[] {
   const targets: AuditTarget[] = [];
+  const formFactors: FormFactor[] =
+    args.formFactor === "both" ? ["mobile", "desktop"] : [args.formFactor];
   for (const site of config.sites) {
     if (!site.enabled) continue;
     if (args.site && site.origin !== args.site) continue;
@@ -250,7 +297,9 @@ function collectTargets(config: ReturnType<typeof CruxPagesConfig.parse>, args: 
       if (!page.enabled) continue;
       if (!page.url) continue;
       if (args.page && page.type !== args.page) continue;
-      targets.push({ site, page });
+      for (const formFactor of formFactors) {
+        targets.push({ site, page, formFactor });
+      }
     }
   }
   return targets;
@@ -301,7 +350,10 @@ function metricValue(result: any, auditId: string): number | null {
 }
 
 function extractImageFindings(result: any): ImageFinding[] {
-  const findings: ImageFinding[] = [];
+  // Dedupe by (audit_id, resource_url): image-delivery-insight emits one item
+  // per DOM node referencing the same resource, with identical wastedBytes —
+  // keep the max so savings are not double-counted.
+  const byKey = new Map<string, ImageFinding>();
   for (const auditId of IMAGE_AUDIT_IDS) {
     const items = result?.lhr?.audits?.[auditId]?.details?.items;
     if (!Array.isArray(items)) continue;
@@ -313,35 +365,166 @@ function extractImageFindings(result: any): ImageFinding[] {
         totalBytes !== null && totalBytes > 0 && wastedBytes !== null
           ? (wastedBytes / totalBytes) * 100
           : null;
-      findings.push({
+      const rect = item?.node?.boundingRect;
+      const displayedWidth = typeof rect?.width === "number" && rect.width > 0 ? rect.width : null;
+      const displayedHeight = typeof rect?.height === "number" && rect.height > 0 ? rect.height : null;
+      const key = `${auditId} ${item.url}`;
+      const existing = byKey.get(key);
+      if (existing && (existing.wasted_bytes ?? 0) >= (wastedBytes ?? 0)) continue;
+      byKey.set(key, {
         audit_id: auditId,
         resource_url: item.url,
         total_bytes: totalBytes,
         wasted_bytes: wastedBytes,
         wasted_pct: wastedPct,
+        displayed_width: displayedWidth,
+        displayed_height: displayedHeight,
       });
     }
   }
+  return [...byKey.values()];
+}
+
+/**
+ * LCP image prioritization checks, read from lcp-discovery-insight (Lighthouse 13):
+ * the first detail item is a checklist {priorityHinted, requestDiscoverable,
+ * eagerlyLoaded}, the second is the LCP node whose snippet carries the src URL.
+ * These are priority findings, not byte savings: byte columns stay NULL.
+ */
+function extractLcpFindings(result: any): ImageFinding[] {
+  const items = result?.lhr?.audits?.["lcp-discovery-insight"]?.details?.items;
+  if (!Array.isArray(items)) return [];
+  const checklist = items.find((i: any) => i?.type === "checklist")?.items;
+  const node = items.find((i: any) => i?.type === "node");
+  if (!checklist || !node) return []; // LCP is not an image (or no checklist): nothing to check
+  const src = typeof node.snippet === "string" ? node.snippet.match(/src="([^"]+)"/)?.[1] : null;
+  if (!src) return [];
+
+  const blank = (auditId: string): ImageFinding => ({
+    audit_id: auditId,
+    resource_url: src,
+    total_bytes: null,
+    wasted_bytes: null,
+    wasted_pct: null,
+    displayed_width: typeof node.boundingRect?.width === "number" ? node.boundingRect.width : null,
+    displayed_height: typeof node.boundingRect?.height === "number" ? node.boundingRect.height : null,
+  });
+
+  const findings: ImageFinding[] = [];
+  if (checklist.eagerlyLoaded?.value === false) findings.push(blank("lcp-lazy-loaded"));
+  if (checklist.priorityHinted?.value === false) findings.push(blank("lcp-missing-fetchpriority"));
+  if (checklist.requestDiscoverable?.value === false) findings.push(blank("lcp-not-discoverable"));
   return findings;
+}
+
+const VTEX_CDN_HOST = /(^|\.)(vtexassets\.com|vteximg\.com\.br)$/;
+// VTEX serves the full-resolution original when the URL lacks the -{w}-{h}
+// resize segment (per VTEX docs). Raster images only; SVGs are dimensionless.
+const VTEX_RESIZE_SEGMENT = /-\d+-\d+(?=[./?]|$)/;
+
+function extractVtexFindings(result: any): ImageFinding[] {
+  const items = result?.lhr?.audits?.["network-requests"]?.details?.items;
+  if (!Array.isArray(items)) return [];
+  const findings: ImageFinding[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (item?.resourceType !== "Image" || typeof item?.url !== "string") continue;
+    if (item.url.startsWith("data:")) continue;
+    if (typeof item?.mimeType === "string" && item.mimeType.includes("svg")) continue;
+    let host: string;
+    let pathname: string;
+    try {
+      const u = new URL(item.url);
+      host = u.hostname;
+      pathname = u.pathname;
+    } catch {
+      continue;
+    }
+    if (!VTEX_CDN_HOST.test(host)) continue;
+    if (VTEX_RESIZE_SEGMENT.test(pathname)) continue;
+    if (seen.has(item.url)) continue;
+    seen.add(item.url);
+    findings.push({
+      audit_id: "vtex-fullres-image",
+      resource_url: item.url,
+      total_bytes: typeof item.transferSize === "number" ? item.transferSize : null,
+      wasted_bytes: null,
+      wasted_pct: null,
+      displayed_width: null,
+      displayed_height: null,
+    });
+  }
+  return findings;
+}
+
+/** Byte split of image requests: modern (AVIF/WebP) vs legacy raster vs
+ *  third-party hosts. SVGs count as legacy for the split; data: URLs ignored. */
+function extractPageImageStats(result: any, auditedUrl: string): PageImageStats {
+  const items = result?.lhr?.audits?.["network-requests"]?.details?.items;
+  const stats: PageImageStats = {
+    image_bytes_modern: 0,
+    image_bytes_legacy: 0,
+    image_bytes_third_party: 0,
+    image_count: 0,
+  };
+  if (!Array.isArray(items)) return stats;
+  let auditedHost = "";
+  try {
+    auditedHost = new URL(auditedUrl).hostname;
+  } catch {
+    // keep empty: everything counts as third-party
+  }
+  for (const item of items) {
+    if (item?.resourceType !== "Image" || typeof item?.url !== "string") continue;
+    if (item.url.startsWith("data:")) continue;
+    const bytes = typeof item.transferSize === "number" ? item.transferSize : 0;
+    stats.image_count++;
+    const mime = typeof item?.mimeType === "string" ? item.mimeType : "";
+    if (mime === "image/avif" || mime === "image/webp") {
+      stats.image_bytes_modern += bytes;
+    } else {
+      stats.image_bytes_legacy += bytes;
+    }
+    let host = "";
+    try {
+      host = new URL(item.url).hostname;
+    } catch {
+      // leave empty
+    }
+    if (auditedHost && host && host !== auditedHost) {
+      stats.image_bytes_third_party += bytes;
+    }
+  }
+  return stats;
 }
 
 async function runAudit(
   url: string,
   port: number,
-  profile: ThrottlingProfile
-): Promise<{ metrics: AuditMetrics; findings: ImageFinding[] }> {
+  profile: ThrottlingProfile,
+  formFactor: FormFactor
+): Promise<{ metrics: AuditMetrics; findings: ImageFinding[]; stats: PageImageStats }> {
   const result = await lighthouse(url, {
     port,
     output: "json",
     logLevel: "error",
-    formFactor: "mobile",
-    screenEmulation: {
-      mobile: true,
-      width: 360,
-      height: 640,
-      deviceScaleFactor: 2.625,
-      disabled: false,
-    },
+    formFactor,
+    screenEmulation:
+      formFactor === "mobile"
+        ? {
+            mobile: true,
+            width: 360,
+            height: 640,
+            deviceScaleFactor: 2.625,
+            disabled: false,
+          }
+        : {
+            mobile: false,
+            width: 1350,
+            height: 940,
+            deviceScaleFactor: 1,
+            disabled: false,
+          },
     throttlingMethod: "simulate",
     throttling: {
       rttMs: profile.rttMs,
@@ -372,7 +555,12 @@ async function runAudit(
           : null,
       lighthouse_version: lhr.lighthouseVersion ?? null,
     },
-    findings: extractImageFindings(result),
+    findings: [
+      ...extractImageFindings(result),
+      ...extractLcpFindings(result),
+      ...extractVtexFindings(result),
+    ],
+    stats: extractPageImageStats(result, lhr.finalDisplayedUrl ?? url),
   };
 }
 
@@ -383,20 +571,14 @@ async function runAudit(
  * collide fatally when two audits run in one process).
  *
  * Protocol: newline-delimited JSON on stdin/stdout. Logs go to stderr only.
- *   parent -> worker: {"type":"audit","target":{origin,group,pageType,url}}
+ *   parent -> worker: {"type":"audit","target":{origin,group,pageType,url,formFactor,throttlingProfile}}
  *                     {"type":"shutdown"}
  *   worker -> parent: {"type":"ready"} | {"type":"launch-error","message"}
- *                     {"type":"result","target":...,"metrics":{...}}
+ *                     {"type":"result","target":...,"metrics":{...},"findings":[...],"stats":{...}}
  *                     {"type":"error","target":...,"message":...}
  */
 async function workerMode(): Promise<void> {
   const say = (msg: unknown) => process.stdout.write(JSON.stringify(msg) + "\n");
-
-  // The parent passes the chosen profile via CLI (validated there already).
-  const profileArgIndex = process.argv.indexOf("--throttling-profile");
-  const profileName =
-    profileArgIndex >= 0 ? process.argv[profileArgIndex + 1] : DEFAULT_THROTTLING_PROFILE;
-  const profile = THROTTLING_PROFILES[profileName] ?? THROTTLING_PROFILES[DEFAULT_THROTTLING_PROFILE];
 
   let chrome: LaunchedChrome;
   try {
@@ -415,8 +597,10 @@ async function workerMode(): Promise<void> {
     if (msg.type === "audit") {
       const target = msg.target as WireTarget;
       try {
-        const { metrics, findings } = await runAudit(target.url, chrome.port, profile);
-        say({ type: "result", target, metrics, findings });
+        const profile =
+          THROTTLING_PROFILES[target.throttlingProfile] ?? THROTTLING_PROFILES[DEFAULT_THROTTLING_PROFILE];
+        const { metrics, findings, stats } = await runAudit(target.url, chrome.port, profile, target.formFactor);
+        say({ type: "result", target, metrics, findings, stats });
       } catch (err) {
         say({ type: "error", target, message: (err as Error).message });
       }
@@ -464,12 +648,15 @@ function saveFindings(
       runId,
       target.origin,
       target.pageType,
+      target.formFactor,
       target.url,
       f.audit_id,
       f.resource_url,
       f.total_bytes,
       f.wasted_bytes,
       f.wasted_pct,
+      f.displayed_width,
+      f.displayed_height,
       fetchedAt
     );
   }
@@ -496,7 +683,7 @@ async function runParallel(ctx: ParallelRunContext): Promise<{ attempted: number
   const spawnWorker = (index: number): ParallelWorker => {
     const proc = spawn(
       process.execPath,
-      ["--import", "tsx", scriptPath, "--worker", "--throttling-profile", ctx.args.throttlingProfile],
+      ["--import", "tsx", scriptPath, "--worker"],
       { stdio: ["pipe", "pipe", "inherit"], cwd: process.cwd() }
     );
     return { index, proc, inFlight: null, dead: false };
@@ -553,17 +740,19 @@ async function runParallel(ctx: ParallelRunContext): Promise<{ attempted: number
         return;
       }
       const listIndex = cursor++;
-      const { site, page } = targets[listIndex];
+      const { site, page, formFactor } = targets[listIndex];
       const target: WireTarget = {
         origin: site.origin,
         group: site.group,
         pageType: page.type,
         url: page.url!,
+        formFactor,
+        throttlingProfile: profileForTarget(ctx.args, formFactor),
       };
       attempted++;
       worker.inFlight = target;
       console.log(
-        `[${listIndex + 1}/${targets.length}] (worker ${worker.index + 1}) ${target.origin} ${target.pageType} — ${target.url}`
+        `[${listIndex + 1}/${targets.length}] (worker ${worker.index + 1}) ${target.origin} ${target.pageType} ${formFactor} — ${target.url}`
       );
       worker.proc.stdin!.write(JSON.stringify({ type: "audit", target }) + "\n");
     };
@@ -577,6 +766,7 @@ async function runParallel(ctx: ParallelRunContext): Promise<{ attempted: number
           const target = msg.target as WireTarget;
           const metrics = msg.metrics as AuditMetrics;
           const findings = (msg.findings ?? []) as ImageFinding[];
+          const stats = msg.stats as PageImageStats | undefined;
           ctx.insert.run(
             newRowId(),
             ctx.runId,
@@ -587,7 +777,7 @@ async function runParallel(ctx: ParallelRunContext): Promise<{ attempted: number
             target.group,
             target.pageType,
             target.url,
-            "mobile",
+            target.formFactor,
             metrics.lcp_ms,
             metrics.fcp_ms,
             metrics.cls,
@@ -597,7 +787,11 @@ async function runParallel(ctx: ParallelRunContext): Promise<{ attempted: number
             metrics.total_byte_weight,
             metrics.performance_score,
             metrics.lighthouse_version,
-            ctx.args.throttlingProfile,
+            target.throttlingProfile,
+            stats?.image_bytes_modern ?? null,
+            stats?.image_bytes_legacy ?? null,
+            stats?.image_bytes_third_party ?? null,
+            stats?.image_count ?? null,
             ctx.fetchedAt
           );
           saveFindings(ctx.insertFinding, ctx.runId, ctx.fetchedAt, target, findings);
@@ -715,7 +909,7 @@ async function main(): Promise<void> {
   const fetchedAt = Math.floor(Date.now() / 1000);
 
   console.log(
-    `Synthetic run ${runId} — ${targets.length} URL(s), suite=${args.suiteVersion}, config=${configHash}, concurrency=${args.concurrency}, throttling=${args.throttlingProfile}`
+    `Synthetic run ${runId} — ${targets.length} URL(s), suite=${args.suiteVersion}, config=${configHash}, concurrency=${args.concurrency}, form-factor=${args.formFactor}, throttling=${args.throttlingProfile ?? "auto (fast4g mobile / broadband desktop)"}`
   );
 
   const insert = db.prepare(
@@ -723,15 +917,18 @@ async function main(): Promise<void> {
        id, run_id, suite_version, label, config_hash, origin, group_name,
        page_type, url, form_factor,
        lcp_ms, fcp_ms, cls, tbt_ms, speed_index_ms, ttfb_ms,
-       total_byte_weight, performance_score, lighthouse_version, throttling_profile, fetched_at, excluded
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`
+       total_byte_weight, performance_score, lighthouse_version, throttling_profile,
+       image_bytes_modern, image_bytes_legacy, image_bytes_third_party, image_count,
+       fetched_at, excluded
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`
   );
 
   const insertFinding = db.prepare(
     `INSERT INTO image_findings (
-       id, run_id, origin, page_type, url_audited, audit_id,
-       resource_url, total_bytes, wasted_bytes, wasted_pct, fetched_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       id, run_id, origin, page_type, form_factor, url_audited, audit_id,
+       resource_url, total_bytes, wasted_bytes, wasted_pct,
+       displayed_width, displayed_height, fetched_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
 
   let attempted = 0;
@@ -767,11 +964,17 @@ async function main(): Promise<void> {
 
     try {
       for (let i = 0; i < targets.length; i++) {
-        const { site, page } = targets[i];
+        const { site, page, formFactor } = targets[i];
+        const throttlingProfile = profileForTarget(args, formFactor);
         attempted++;
-        console.log(`[${i + 1}/${targets.length}] ${site.origin} ${page.type} — ${page.url}`);
+        console.log(`[${i + 1}/${targets.length}] ${site.origin} ${page.type} ${formFactor} — ${page.url}`);
         try {
-          const { metrics, findings } = await runAudit(page.url!, chrome.port, THROTTLING_PROFILES[args.throttlingProfile]);
+          const { metrics, findings, stats } = await runAudit(
+            page.url!,
+            chrome.port,
+            THROTTLING_PROFILES[throttlingProfile],
+            formFactor
+          );
           insert.run(
             newRowId(),
             runId,
@@ -782,7 +985,7 @@ async function main(): Promise<void> {
             site.group,
             page.type,
             page.url!,
-            "mobile",
+            formFactor,
             metrics.lcp_ms,
             metrics.fcp_ms,
             metrics.cls,
@@ -792,14 +995,25 @@ async function main(): Promise<void> {
             metrics.total_byte_weight,
             metrics.performance_score,
             metrics.lighthouse_version,
-            args.throttlingProfile,
+            throttlingProfile,
+            stats.image_bytes_modern,
+            stats.image_bytes_legacy,
+            stats.image_bytes_third_party,
+            stats.image_count,
             fetchedAt
           );
           saveFindings(
             insertFinding,
             runId,
             fetchedAt,
-            { origin: site.origin, group: site.group, pageType: page.type, url: page.url! },
+            {
+              origin: site.origin,
+              group: site.group,
+              pageType: page.type,
+              url: page.url!,
+              formFactor,
+              throttlingProfile,
+            },
             findings
           );
           succeeded++;

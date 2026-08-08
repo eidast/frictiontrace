@@ -43,4 +43,39 @@ function applySchema(db: CruxDb): void {
       "ALTER TABLE synthetic_runs ADD COLUMN throttling_profile TEXT NOT NULL DEFAULT 'slow4g'"
     );
   }
+
+  // Additive migrations (image-audit-v2): page image stats on synthetic_runs,
+  // form factor + displayed dimensions on image_findings.
+  const synthColumns = new Set(
+    (db.prepare("PRAGMA table_info(synthetic_runs)").all() as Array<{ name: string }>).map((c) => c.name)
+  );
+  if (synthColumns.size > 0) {
+    if (!synthColumns.has("image_bytes_modern")) {
+      db.exec("ALTER TABLE synthetic_runs ADD COLUMN image_bytes_modern REAL");
+    }
+    if (!synthColumns.has("image_bytes_legacy")) {
+      db.exec("ALTER TABLE synthetic_runs ADD COLUMN image_bytes_legacy REAL");
+    }
+    if (!synthColumns.has("image_bytes_third_party")) {
+      db.exec("ALTER TABLE synthetic_runs ADD COLUMN image_bytes_third_party REAL");
+    }
+    if (!synthColumns.has("image_count")) {
+      db.exec("ALTER TABLE synthetic_runs ADD COLUMN image_count INTEGER");
+    }
+  }
+
+  const findingColumns = new Set(
+    (db.prepare("PRAGMA table_info(image_findings)").all() as Array<{ name: string }>).map((c) => c.name)
+  );
+  if (findingColumns.size > 0) {
+    if (!findingColumns.has("form_factor")) {
+      db.exec("ALTER TABLE image_findings ADD COLUMN form_factor TEXT NOT NULL DEFAULT 'mobile'");
+    }
+    if (!findingColumns.has("displayed_width")) {
+      db.exec("ALTER TABLE image_findings ADD COLUMN displayed_width REAL");
+    }
+    if (!findingColumns.has("displayed_height")) {
+      db.exec("ALTER TABLE image_findings ADD COLUMN displayed_height REAL");
+    }
+  }
 }

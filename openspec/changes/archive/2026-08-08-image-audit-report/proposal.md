@@ -4,7 +4,7 @@ Homepage images are the heaviest and most impactful assets in e-commerce: they d
 
 ## What Changes
 
-- Extend the synthetic runner to persist Lighthouse image-audit detail items (`modern-image-formats`, `uses-optimized-images`, `uses-responsive-images`, `offscreen-images`, `unsized-images`) into a new `image_findings` table (additive migration), capturing per-image URL, audit type, wasted bytes, and total bytes.
+- Extend the synthetic runner to persist Lighthouse image-audit detail items (`image-delivery-insight` — which consolidates the legacy `modern-image-formats` / `uses-optimized-images` / `uses-responsive-images` / `offscreen-images` savings removed in Lighthouse 13 — and `unsized-images`) into a new `image_findings` table (additive migration), capturing per-image URL, audit type, wasted bytes, and total bytes. Items are deduplicated by (audit_id, resource_url) because `image-delivery-insight` repeats one row per DOM node referencing the same resource.
 - Add `scripts/image-report.ts` (`npm run image-report`): generates `reports/image-audit.html` — a self-contained work-list report, homepage-only, ordered by estimated byte savings, per site, with a "worst offenders" global view.
 - Mark sites whose audit likely hit an anti-bot challenge page (heuristic: zero image findings AND suspiciously low page weight, or blocked URL patterns) as "parcial" in the report.
 
